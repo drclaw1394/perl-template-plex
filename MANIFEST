@@ -1,6 +1,8 @@
 Changes
+examples/examples.pl
+lib/Template/Lexical.pm
 Makefile.PL
 MANIFEST
+MANIFEST.SKIP
 README
 t/Template-Lexical.t
-lib/Template/Lexical.pm

@@ -1,7 +1,7 @@
 package Template::Lexical;
 use strict;
 use warnings;
-use version; our $VERSION = version->declare('v0.01');
+use version; our $VERSION = version->declare('v0.1.0');
 use feature "refaliasing";
 no warnings "experimental";
 
