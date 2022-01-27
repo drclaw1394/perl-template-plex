@@ -1,0 +1,313 @@
+=head1 NAME
+
+Template::Plex - Templates with Perl and Lexical Aliasing
+
+=head1 SYNOPSIS
+
+	use Template::Plex;
+
+	my $base_data={name=>"James", age=>"12", fruit=>"banana"};
+
+	#An inline template in a scalar
+	my $template = '$name\'s age $age and favourite fruit is $fruit';
+
+	#Prepare and construct a render function
+	my $render=prepare_template($template,$base_data);
+
+	#Render with the values aliased in $base_data
+	$render->();		
+	#James's age is 12 and favourite fruit is banana
+
+	#Update the data, 
+	$base_data->{qw<name,fruit>}=qw<John apple>;
+
+	#Rendering again will use updated aliased values
+	$render->();		
+	#John's age is 12 and favourite fruit is apple
+
+
+	##Load template recursively from file and prepare
+
+	my $render=slurp_template($path,$base_data);
+
+	$render->();
+ 
+
+=head1 DESCRIPTION
+
+A very small, very powerful templating mechanism. After all the template
+language is perl itself. If you are looking for an 'embedded perl' template
+module, this is NOT it. Instead of classes with render methods, a template when
+prepared is simply a subroutine refernce which has aliased lexical access to
+variables you provide
+
+That means you can alter the variables outside of the call to the template and
+the changes are direclty accessable the next time the template is renderd.
+
+
+As perl is doing the heavy lifting in the syntax deparment, the actual code is
+quite small. The documentaion is larger (significantly) in byte size. In that spirit, this module does no management on templates.
+
+However as the result of preparing a template is sub reference it is very easy to memorize or include in your applicaiton
+
+A summary of features:
+
+=over
+
+=item Perl is the template language
+
+=item Templates are compiled into subroutine for repeated execution
+
+=item Variables are aliased for speedy access
+
+=item Templates can inject other template from file
+
+=back
+
+
+=head1 MOTIATION
+
+So many templating systems available, but none of them that I know of actually
+use perl as the template language. There are lots of 'embedded perl' templating
+modules, but that is a different beast.  Also I wanted to experiment using
+lexical aliasing as it can have good performance benefits, and streamline to an
+efficient functional API
+
+=head1 API
+
+=head2 Executing Templates
+
+=head3 C<slurp_template>
+
+	slurp_template $path, $hash_ref
+
+	where
+		$path is the path to a .tpl file 
+		$hash_ref is a anonymouns hash with elements to alias
+	
+Opens a the file given by C<$path> and reads the contents. If any C<inject> statements are presents they are replaced with content from recursive loading templates specified.
+
+The C<$hash_ref> has all its keys used to create aliased aliased lexical variables in to the prepared tempate sub routine.
+
+	eg
+		my $hash={
+			name=>"bob",
+			age=>98
+		};
+
+		my $renderer-slurp_template "my_template.plex", $hash;
+
+
+		#my_template.plex
+		My name is $name and my age is $age
+
+In this example the hash elements C<{name}> and C<{age}> are aliased so lexical variables C<$name> and C<$age> which are directly accessable to the template.
+
+=head3 C<prepare_template>
+
+	prepare_template 'template string', $hash_ref;
+
+
+	eg
+		my $hash={
+			name=>"bob",
+			age=>98
+		};
+
+		my $template='My name is $name and my age is $age';
+
+		my $renderer-slurp_template $template, $hash;
+
+Similar to C<slurp_tempalte>, however, the template text is provided by a string literal or scalar.
+
+
+=head2 Template Only
+
+=head1 C<inject>
+
+	@{[inject($path)}]
+
+	where $path is path to template file to inject
+
+This special subroutine call is replaced with the contents of the template at C<$path>. Once it is replaced, any subsequent instances are also processed recursively.
+
+
+
+=head1 TEMPLATE SYNTAX
+
+Well, its just perl. Seriously. A template is a perl program with the two following constraints:
+
+=over 
+
+=item 1. The program consists only of (powerful) syntax permissible in a double quoted string
+
+=item 2. The outermost double quote operators are ommited from the program/template
+
+=back
+
+This is best illustrated by example.  The following  shows a valid (boring) template stored in a scalar:
+
+	my $template = 'this is a $adj template';
+
+The two rules are satisfied. Firstly the syntax is valid for a double quoted
+string (the C<$adj> is a scalar to be interpolated into the tempalte). Secondly
+the outer double quotes for the string are omitted.
+
+
+A template could also be stored in a file following the same two rules.
+
+	How many colours are in the rainbow? If you said $count  you would be correct
+
+Again, the syntax is that of a double quoted interpolation and the outer double quotes are
+ommited.
+
+In otherwords, template looks like plain text, but with double quoted added is valid perl code.
+
+
+=head1 THE POWER OF DOUBLE QUOTE INERPOLATION
+
+Perl has the abiliby to interpolate just about anything into a string. The
+following shows examples of valid perl syntax to get you salivating:
+
+
+=head3 Access to Scalars, Arrays and Hashes
+
+	This template uses a $scalar and it will also
+
+	access the array element $array->[$index]
+
+	Accessing element $hash->{key} just for fun
+
+
+=head2 Executing Subroutine statements
+
+To achieve this, a neat trick is to dereference an inline reference to an
+annonynous array. The contents of the array is then the result of the
+subroutine call. Sounds like alot but it is only a couple of braces:
+
+	Calling the sub @{[ my_sub()} ]}
+
+For comparison, this technique is only 1 more character to type than similar embedded perl
+templates systems
+
+	Calling the sub <% my_sub() %>
+
+
+=head2 Executing Multiplle Statements
+
+The C<do{}> construct executes a block, which can have any number of statements
+and returns the last statement executed into the template
+
+	Calling multiple statments @{[ do { my $a=1; $a++; ($a,-$a) } ]} in this template
+
+
+=head2 Other Examples
+
+=head3 Simple mapping (single statement)
+
+	My shoppling list @{[ join "\n", map uc, @items]}
+
+=head3 Executing a BEGIN block
+
+Again standard perl syntax for the win
+
+	Template will call hi res time 
+	The time is: @{[ time ]}
+	@{[ BEGIN {
+		use Time::HiRes qw<time>;
+		}
+	]}
+	
+
+=head2 MORE ON LEXICAL ALIASING
+
+Any keys present in the hash when C<prepare_template> or C<slurp_template> is called are used to
+construct lexical variables which are aliases to the hash elements of the same
+key name. The hash itself is also aliased to a variable called C<%fields> 
+
+So for a C<$base_data> hash like this:
+
+	my $base_data={name=>"jimbo", age=>10};
+
+The template can access the fields "name" and age like this:
+
+	my $template='my name is $name an I am $age';
+
+or like this:
+	
+	my $template='my name is $fields{name} and I am $fields{age}';
+
+The first version uses the lexical variables skips the hash lookup, which gives
+higher rendering rates.  The caveat is that all fields must exist at the time
+the template is prepared.
+
+To change the values and render the template the same C<$base_data> variable
+must be manipulated. ie
+
+	$base_data->{name}="Tim";
+	$render->();
+
+This still performs no hash lookups in the rendering and is a very quick way of
+rendering the changing data.
+
+
+=head2 NOT USING LEXICAL ALIASING 
+
+If the data to apply to the template completely changes, it can be passed as a
+hash ref to the render code reference.
+
+	my $new_variable={name=>data};
+	$render->($new_variable);
+
+However to use this data the template must be constructed to access the fields
+directly:
+
+	my $template='my name is $fields{name} and I am $fields{age}';
+
+=head2 HYBRID ACCESS
+
+This is interesting. The template can refer to the lexical aliases and the
+direct fields at the same time. The lexical aliases only refer to the data
+provided at preparation time, while the field refer to the latest data
+provided:
+
+	my $template='my name is $fields{name} and I am $age
+	my $base_data={name=>"jimbo", age=>10};
+	my $override_data={name=>"Eva"};
+
+	my $render=prepare_template $template, $base_data;
+	my $string=$render($override_data);
+	#string will be "my name is Eva and I am 10
+
+
+=head1 SECURITY
+
+This module uses C<eval> to generate the code ref for rendering. This means
+that your template, being perl code, is being executed. If you do not know what
+is in your templates, then maybe this module isn't for you.
+
+To mitigate the security risk, the rendering code refs should be generated  and
+cached, so they are not needing to be run during normal execution. That will
+provide faster rendering and also, prevent unknown templates from accidentally
+being executed.
+
+
+=head1 SEE ALSO
+
+Yet another template module right? 
+
+Do a search on CPAN for 'template' and make a cup of coffee.
+
+
+=head1 AUTHOR
+
+Ruben Westerberg, E<lt>drclaw@mac.comE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2021 by Ruben Westerberg
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, or under the MIT license
+
+=cut

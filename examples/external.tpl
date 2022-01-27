@@ -1,5 +1,6 @@
 This is the main template: Title in external is $title
 @{[ do {
+	#Can even commen
 	BEGIN {
 		use Time::HiRes qw<time>
 	}

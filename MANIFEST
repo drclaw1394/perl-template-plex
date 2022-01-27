@@ -1,6 +1,10 @@
 Changes
 examples/examples.pl
+examples/experiment.pl
+examples/external.tpl
+examples/header.tpl
 lib/Template/Lexical.pm
+lib/Template/Lexical.pod
 Makefile.PL
 MANIFEST
 MANIFEST.SKIP

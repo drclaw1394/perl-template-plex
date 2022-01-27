@@ -2,7 +2,7 @@ use feature ":all";
 use warnings;
 #use strict;
 #no warnings "uninitialized";
-use Template::Lexical;
+use Template::Plex;
 use Data::Dumper;
 my @items=qw<eggs watermellon hensteeth>;
 my $hash={
@@ -10,14 +10,18 @@ my $hash={
 	surname=>"chick"
 };
 
-my $template=slurp_template("external.tpl");
+my $template=slurp_template("external.tpl",$hash);
 
-say $template;
-
-my $render=prepare_template($template,$hash);
-say $render->();
-$hash->{surname}="dude";
-say $render->();
+say $template->();
+$hash->{surname}="lkajsdf";
+say $template->();
+#################################################
+#                                               #
+# my $render=prepare_template($template,$hash); #
+# say $render->();                              #
+# $hash->{surname}="dude";                      #
+# say $render->();                              #
+#################################################
 
 #my $template=slurp_template "examples/external.tpl",{title=>$title};
 #say $template;

@@ -1,15 +1,9 @@
-# Before 'make install' is performed this script should be runnable with
-# 'make test'. After 'make install' it should work as 'perl Template-Lexical.t'
-
-#########################
-
-# change 'tests => 1' to 'tests => last_test_to_print';
-
 use strict;
 use warnings;
 
 use Test::More tests => 6;
-BEGIN { use_ok('Template::Lexical') };
+BEGIN { use_ok('Template::Plex') };
+use Template::Plex;
 my $default_data={data=>[1,2,3,4]};
 my $template=q|@{[
 	do {
