@@ -2,7 +2,7 @@ use Template::Lexical;
 {	
 	print "EXAMPLE SYNOPSIS\n";
 	my $base_data={name=>"James", age=>"12", fruit=>"banana"};
-	my $template = '"$name is $age and favourite fruit is $fruit"';
+	my $template = '$name is $age and favourite fruit is $fruit';
 	print "Template is: $template\n";
 
 	my $render=prepare_template($template,$base_data);
@@ -24,10 +24,10 @@ use Template::Lexical;
 	print "EXAMPLE 1a: BASIC LEXICAL TEXT TEMPLATE\n";
 	#
 	#Note the string mus be in literal quotes ie ''  or q() et al
-	#String must be valid perl code. This example is simply iterpolated perl string
+	#String must be valid perl code. This example is simply interpolated perl string
 	#hence the use of double quotes
 	#
-	my $template='"Template filled with $field1 and $field2"';
+	my $template='Template filled with $field1 and $field2';
 	print "Template is: $template\n";
 
 
@@ -35,7 +35,7 @@ use Template::Lexical;
 	my $data={field1=>"monkeys", field2=>"hippos"};		
 
 
-	#Any keys present at perperation time are used to generate lexical aliases of the hash entries. This 
+	#Any keys present at preparation time are used to generate lexical aliases of the hash entries. This 
 	#Returned item is  code ref to execute
 	my $render=prepare_template $template, $data;
 
@@ -64,7 +64,7 @@ use Template::Lexical;
 	#The template can also access fields directly in the hash used instead of lexical aliases.
 	#Its a little more to type but allows the render code to use completely instead of updating the base data hash
 	#
-	my $template='"Template filled with $fields{field1} and $fields{field2} and $fields{field3}"';
+	my $template='Template filled with $fields{field1} and $fields{field2} and $fields{field3}';
 	print "Template is: $template\n";
 	my $data={field1=>"monkeys", field2=>"hippos"};		
 	#field3 is not specified and will be undefined

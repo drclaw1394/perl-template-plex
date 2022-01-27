@@ -2,24 +2,23 @@ package Template::Lexical;
 use strict;
 use warnings;
 use version; our $VERSION = version->declare('v0.1.0');
-use feature "refaliasing";
+use feature qw<say refaliasing>;
 no warnings "experimental";
 
 use Exporter 'import';
 
 
-our %EXPORT_TAGS = ( 'all' => [ qw( prepare_template
-	
-) ] );
+our %EXPORT_TAGS = ( 'all' => [ qw( prepare_template slurp_template) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
 	prepare_template	
+	slurp_template
 );
 
 # First argument the template string/text. This is any valid perl code
-# Second aregument is a hash ref to default or base level fields
+# Second argument is a hash ref to default or base level fields
 # returns a code reference which when executed returns anything that perl ca
 sub prepare_template{
 	\my $data=\shift;
@@ -27,7 +26,6 @@ sub prepare_template{
 	die "NEED A HASH REF " unless  ref $href eq "HASH" or !defined $href;
 	$href//={};
 	\my %fields=$href;	#hash ref
-	
 
 	my $string="";
 	#make lexically available aliases for all keys currently defined in the input
@@ -35,9 +33,10 @@ sub prepare_template{
 		$string.= "\\my \$$k=\\\$fields{$k};\n";
 	}
 	$string.=
-	"sub {no warnings 'uninitialized';"
-	."\\my %fields=shift//\\%fields;"
-	."$data; };\n";
+	"sub {\nno warnings 'uninitialized';\n"
+	."\\my %fields=shift//\\%fields;\n"
+	."qq{$data}; };\n";
+	say $string;
 	my $ref=eval $string;
 	if($@ and !$ref){
 		print  $@;
@@ -46,9 +45,34 @@ sub prepare_template{
 	$ref;
 }
 
+sub _subst_inject {
+	\my 	$buffer=\$_[0];
+	say "processiing $buffer";
+	while($buffer=~s|\@\{\[\s*inject\("(\w+)"\)\]\}|slurp_template("$1.tpl")|e){
+		
+	}
+}
+
+#Read an entire file and return the contents
+sub slurp_template{
+	my $path=shift;
+	#my $args=shift;
+	do {
+		local $/=undef;
+		if(open my $fh, "<", $path){
+			my $data=<$fh>;
+			_subst_inject($data);
+			$data;
+		}
+		else {
+			say "Error slurpping";
+			"";
+		}
+	}
+}
+
 1;
 __END__
-# Below is stub documentation for your module. You'd better edit it!
 
 =head1 NAME
 
@@ -58,7 +82,7 @@ Template::Lexical - Perl base template using lexical aliasing
 
   use Template::Lexical;
   my $base_data={name=>"James", age=>"12", fruit=>"banana"};
-  my $template = '"$name\'s age $age and favourite fruit is $fruit"';
+  my $template = '$name\'s age $age and favourite fruit is $fruit';
   my $render=prepare_template($template,$base_data);
   
   $render->();		#renders with base values. 
@@ -85,7 +109,7 @@ al). Like always the last statement will be the returned.
 	q|sub { "This template returns a code reference" }|
 
 Because the template is perl code, all the loop and control constructs are
-available. here is a template that renders an array of numbers form the field
+available. Here is a template that renders an array of numbers form the field
 called C<$data>:
 
        my $template='my $s="";
@@ -103,7 +127,7 @@ Data to apply to the template is provided as a hash reference
 
 
 To use a this template it must be prepared using C<prepare_template>. What is
-returned from this is the renderer code reference which when called acutally
+returned from this is the renderer code reference which when called actually
 renders your template. Very simple and powerful.
 	
 	my $render=prepare_template $template, $base_data; 	#create a renderer
@@ -132,20 +156,20 @@ The first version uses the lexical variables skips the hash lookup, which gives
 higher rendering rates.  The caveat is that all fields must exist at the time
 the template is prepared.
 
-To change the values and rerender the template the same C<$base_data> variable
+To change the values and render the template the same C<$base_data> variable
 must be manipulated. ie
 
 	$base_data->{name}="Tim";
 	$render->();
 
 This still requires no hash lookups in the rendering and is a very quick way of
-rendering the chaning data.
+rendering the changing data.
 
 
 =head2 ARBITARY FIELD ACCESS
 
 If the data to apply to the template completely changes, it can be passed as a
-hash rer to the render code reference.
+hash ref to the render code reference.
 
 	my $new_variable={name=>data};
 	$render->($new_variable);
@@ -157,7 +181,7 @@ directly:
 
 =head2 HYBRID ACCESS
 
-This is interesting. The template can refer to the lexical aliases and the the
+This is interesting. The template can refer to the lexical aliases and the
 direct fields at the same time. The lexical aliases only refer to the data
 provided at preparation time, while the field refer to the latest data
 provided:
@@ -181,7 +205,7 @@ The second (optional) argument is a hash reference to a hash containing the
 base data to alias in to lexical variables. The hash itself is also aliased
 into a variable called C<%fields> to allow direct access.
 
-It returns a code refernce which when executed renders the template
+It returns a code reference which when executed renders the template
 
 =head1 SECURITY
 
@@ -191,7 +215,7 @@ is in your templates, then maybe this module isn't for you.
 
 To mitigate the security risk, the rendering code refs should be generated  and
 cached, so they are not needing to be run during normal execution. That will
-provide faster rendering and also, prevent unknown templates from accidently
+provide faster rendering and also, prevent unknown templates from accidentally
 being executed.
 
 
