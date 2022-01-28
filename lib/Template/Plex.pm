@@ -5,6 +5,8 @@ use version; our $VERSION = version->declare('v0.1.0');
 use feature qw<say refaliasing>;
 no warnings "experimental";
 
+use File::Basename qw<dirname basename>;
+use File::Spec::Functions qw<catfile>;
 use Exporter 'import';
 
 
@@ -16,6 +18,11 @@ our @EXPORT = qw(
 	prepare_template	
 	slurp_template
 );
+
+my $Inject=qr|\@\{\s*\[\s*inject\s*\(\s*(.*?)\s*\)\s*\] \s* \}|x;
+#my $Inject=qr|\@ \s* \{ \s* \[ \s* inject \s* \( (.*+) \) \s* \] \}|x;
+
+my @Caller; #stack of paths to curretly preparing templates
 
 # First argument the template string/text. This is any valid perl code
 # Second argument is a hash ref to default or base level fields
@@ -44,11 +51,42 @@ sub prepare_template{
 	$ref;
 }
 
+sub _munge {
+	my $input=shift;
+	say "in munge: $input";
+	#test for literals
+	my $path;	
+	if($input =~ /^"(.*)"$/){
+		#literal		
+		$path=$1;	
+	}
+	elsif($input =~ /^'(.*)'$/){
+		#literal		
+		$path=$1;	
+	}
+	else {
+		#not supported?
+	}
+	say $path;
+        #########################################
+        # #Do relative-to-template file mapping #
+        # my $dir=dirname((caller)[1]);         #
+        # $path =catfile $dir,$path;            #
+        # say $path;                            #
+        #########################################
+	slurp_template($path);
+}
+
 sub _subst_inject {
 	\my 	$buffer=\$_[0];
-	while($buffer=~s|\@\{\[\s*inject\("(\w+)"\)\]\}|slurp_template("$1.tpl")|e){
-		
-	}
+	say "asdofj";
+	#say $buffer;
+	if($buffer=~$Inject){
+		say "got one $1";
+	};
+	while($buffer=~s|$Inject|_munge($1)|e){say "GOT A MATCH"};
+	#while($buffer=~s|$Inject|slurp_template("$1.plex")|e){say "GOT A MATCH"};
+	#while($buffer=~s|\@\{\[\s*inject\("(\w+)"\)\]\}|slurp_template("$1.tpl")|e){}
 }
 
 #Read an entire file and return the contents
@@ -57,9 +95,19 @@ sub slurp_template{
 	my $args=shift;
 	do {
 		local $/=undef;
+		if($args){
+			#Called from application
+			push @Caller ,dirname $path;		#push to stack
+		}
+		else {
+			#Called from template
+			say catfile $Caller[-1],$path
+		}
+
 		if(open my $fh, "<", $path){
 			my $data=<$fh>;
 			_subst_inject($data);
+			pop @Caller;
 			if($args){
 				prepare_template($data,$args);
 			}

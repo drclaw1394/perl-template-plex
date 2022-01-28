@@ -8,10 +8,9 @@ This is the main template: Title in external is $title
 }
 ]}
 
-	
-@{[inject("header")]}
-
-@{[$surname =~ /chick/i ?"@{[inject("header")]}":"Not for you" ]}
-
 @{['other perl code']}
+
+@{[inject ( "header.plex")]}
+
+	
 

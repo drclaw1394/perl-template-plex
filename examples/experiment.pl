@@ -10,11 +10,11 @@ my $hash={
 	surname=>"chick"
 };
 
-my $template=slurp_template("external.tpl",$hash);
+my $template=slurp_template("external.plex",$hash);
 
 say $template->();
-$hash->{surname}="lkajsdf";
-say $template->();
+#$hash->{surname}="lkajsdf";
+#say $template->();
 #################################################
 #                                               #
 # my $render=prepare_template($template,$hash); #
