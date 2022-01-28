@@ -1,8 +1,9 @@
 package Template::Plex;
 use strict;
 use warnings;
+
 use version; our $VERSION = version->declare('v0.1.0');
-use feature qw<say refaliasing>;
+use feature ":all";#qw<say state refaliasing>;
 no warnings "experimental";
 
 use File::Basename qw<dirname basename>;
@@ -10,26 +11,24 @@ use File::Spec::Functions qw<catfile>;
 use Exporter 'import';
 
 
-our %EXPORT_TAGS = ( 'all' => [ qw( prepare_template slurp_template) ] );
+our %EXPORT_TAGS = ( 'all' => [ qw( plex) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
-	prepare_template	
-	slurp_template
+	plex
 );
 
 my $Inject=qr|\@\{\s*\[\s*inject\s*\(\s*(.*?)\s*\)\s*\] \s* \}|x;
-#my $Inject=qr|\@ \s* \{ \s* \[ \s* inject \s* \( (.*+) \) \s* \] \}|x;
 
-my @Caller; #stack of paths to curretly preparing templates
 
 # First argument the template string/text. This is any valid perl code
 # Second argument is a hash ref to default or base level fields
-# returns a code reference which when executed returns anything that perl ca
-sub prepare_template{
+# returns a code reference which when called renders the template with the values
+sub _prepare_template{
 	\my $data=\shift;
 	my $href=shift;
+	my $root=shift;
 	die "NEED A HASH REF " unless  ref $href eq "HASH" or !defined $href;
 	$href//={};
 	\my %fields=$href;	#hash ref
@@ -41,7 +40,9 @@ sub prepare_template{
 	}
 	$string.=
 	"sub {\nno warnings 'uninitialized';\n"
+	."no strict;\n"
 	."\\my %fields=shift//\\%fields;\n"
+	."my \$root=".($root?"\"$root\"":"undef").";\n"
 	."qq{$data}; };\n";
 	my $ref=eval $string;
 	if($@ and !$ref){
@@ -51,9 +52,10 @@ sub prepare_template{
 	$ref;
 }
 
+#a little helper to allow 'including' templates into each other
 sub _munge {
-	my $input=shift;
-	say "in munge: $input";
+	my ($input, $root)=@_;
+
 	#test for literals
 	my $path;	
 	if($input =~ /^"(.*)"$/){
@@ -66,59 +68,52 @@ sub _munge {
 	}
 	else {
 		#not supported?
+		#
 	}
-	say $path;
-        #########################################
-        # #Do relative-to-template file mapping #
-        # my $dir=dirname((caller)[1]);         #
-        # $path =catfile $dir,$path;            #
-        # say $path;                            #
-        #########################################
-	slurp_template($path);
+	plex($path,undef,$root);
 }
 
 sub _subst_inject {
-	\my 	$buffer=\$_[0];
-	say "asdofj";
-	#say $buffer;
-	if($buffer=~$Inject){
-		say "got one $1";
+	\my $buffer=\$_[0];
+	my $root=$_[1];
+	while($buffer=~s|$Inject|_munge($1,$root)|e){
+		#TODO: Possible point for diagnostics?
 	};
-	while($buffer=~s|$Inject|_munge($1)|e){say "GOT A MATCH"};
-	#while($buffer=~s|$Inject|slurp_template("$1.plex")|e){say "GOT A MATCH"};
-	#while($buffer=~s|\@\{\[\s*inject\("(\w+)"\)\]\}|slurp_template("$1.tpl")|e){}
 }
 
 #Read an entire file and return the contents
-sub slurp_template{
-	my $path=shift;
-	my $args=shift;
-	do {
+sub plex{
+	my ($path, $args, $root, $cb)=@_;
+	
+	my $data=do {
 		local $/=undef;
-		if($args){
-			#Called from application
-			push @Caller ,dirname $path;		#push to stack
+		if(ref($path) eq "GLOB"){
+			#file handle
+			<$path>;
 		}
-		else {
-			#Called from template
-			say catfile $Caller[-1],$path
+		elsif(ref($path) eq "ARRAY"){
+			#process as inline template
+			join "", @$path;
 		}
-
-		if(open my $fh, "<", $path){
-			my $data=<$fh>;
-			_subst_inject($data);
-			pop @Caller;
-			if($args){
-				prepare_template($data,$args);
-			}
-			else {
-				$data;
-			}
+		else{
+			#Assume a path
+			#Prepend the root if present
+			$path=catfile $root, $path if $root;
+			say "PATH: $path";
+			my $fh;
+			<$fh> if open $fh, "<", $path;
 		}
-		else {
-			#say "Error slurpping";
-			"";
-		}
+	};
+	
+	#Perform inject substitution
+	_subst_inject($data, $root);
+	if($args){
+		#Only call this from top level call
+		#Returns the render sub
+		_prepare_template($data, $args, $root);
+	}
+	else {
+		$data;
 	}
 }
 

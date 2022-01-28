@@ -2,15 +2,16 @@ This is the main template: Title in external is $title
 @{[ do {
 	#Can even commen
 	BEGIN {
-		use Time::HiRes qw<time>
+		use Time::HiRes qw<time>;
+		use JSON;
 	}
-	join "", map time."\n", (1..10) 
+	encode_json  [map time."\n", (1..10)];
 }
 ]}
 
 @{['other perl code']}
 
-@{[inject ( "header.plex")]}
+@{[inject("header.plex")]}
 
 	
 

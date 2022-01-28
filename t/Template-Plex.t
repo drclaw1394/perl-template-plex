@@ -5,6 +5,7 @@ use Test::More tests => 6;
 BEGIN { use_ok('Template::Plex') };
 use Template::Plex;
 my $default_data={data=>[1,2,3,4]};
+
 my $template=q|@{[
 	do {
 		my $s="";
@@ -16,9 +17,8 @@ my $template=q|@{[
 ]}|;
 
 
-my $render=prepare_template $template, $default_data;
+my $render=plex [$template], $default_data;
 my $result=$render->();
-
 my $expected="";
 for(1,2,3,4){
 	$expected.="row $_\n";
@@ -59,7 +59,7 @@ $template=q|@{[
 ]}|;
 
 $default_data={data=>[1,2,3,4]};
-$render=prepare_template $template, $default_data;
+$render=plex [$template], $default_data;
 $result=$render->($override_data);
 $expected="";
 for(1,2,3,4){
@@ -72,7 +72,7 @@ $template=q|my name is $name not $fields{name}|;
 $default_data={name=>"John"};
 $override_data={name=>"Jill"};
 
-$render=prepare_template $template, $default_data;
+$render=plex [$template], $default_data;
 $result=$render->($override_data);
 $expected="";
 ok $result eq "my name is John not Jill", "Lexical and override access"
