@@ -4,150 +4,89 @@ NAME
 SYNOPSIS
             use Template::Plex;
 
+            #Data for templates alias and access
             my $base_data={name=>"James", age=>"12", fruit=>"banana"};
 
-            #An inline template in a scalar
-            my $template = '$name\'s age $age and favourite fruit is $fruit';
+            my $inline_template='$name\'s age $age and favourite fruit is $fruit'
 
-            #Prepare and construct a render function
-            my $render=prepare_template($template,$base_data);
+            my $ren=plex [$inline_template], $base_data, $root;
+
+            #       or
+
+            my $ren=plex $path_to_a_file, $base_data, $root;
+
+            #       or
+
+            my $ren=plex $file_handle, $base_data, $root;
+
 
             #Render with the values aliased in $base_data
             $render->();            
-            #James's age is 12 and favourite fruit is banana
+            #
+            #=>     James's age is 12 and favourite fruit is banana
 
             #Update the data, 
             $base_data->{qw<name,fruit>}=qw<John apple>;
 
             #Rendering again will use updated aliased values
             $render->();            
-            #John's age is 12 and favourite fruit is apple
-
-
-            ##Load template recursively from file and prepare
-
-            my $render=slurp_template($path,$base_data);
-
-            $render->();
+            #
+            #=>     John's age is 12 and favourite fruit is apple
 
 DESCRIPTION
-    A very small, very powerful templating mechanism. After all the template
-    language is perl itself. If you are looking for an 'embedded perl'
-    template module, this is NOT it. Instead of classes with render methods,
-    a template when prepared is simply a subroutine refernce which has
-    aliased lexical access to variables you provide
+    A very small, very powerful templating mechanism. After all, the
+    template language is perl itself. No not embedded perl, just perl. Its
+    key goals and features are:
 
-    That means you can alter the variables outside of the call to the
-    template and the changes are direclty accessable the next time the
-    template is renderd.
+    Templates are 99.9% perl syntax
+    Lexical aliasing for performance and style
+    Include Templates withing templates easily
+
+    This module uses the experimental feature refaliasing which may or may
+    not be around int later perl versions
 
     As perl is doing the heavy lifting in the syntax deparment, the actual
     code is quite small. The documentaion is larger (significantly) in byte
-    size. In that spirit, this module does no management on templates.
-
-    However as the result of preparing a template is sub reference it is
-    very easy to memorize or include in your applicaiton
-
-    A summary of features:
-
-    Perl is the template language
-    Templates are compiled into subroutine for repeated execution
-    Variables are aliased for speedy access
-    Templates can inject other template from file
+    size. In that spirit, this module does no management of templates.
 
 MOTIATION
     So many templating systems available, but none of them that I know of
     actually use perl as the template language. There are lots of 'embedded
-    perl' templating modules, but that is a different beast. Also I wanted
-    to experiment using lexical aliasing as it can have good performance
-    benefits, and streamline to an efficient functional API
-
-API
-  Executing Templates
-   "slurp_template"
-            slurp_template $path, $hash_ref
-
-            where
-                    $path is the path to a .tpl file 
-                    $hash_ref is a anonymouns hash with elements to alias
-
-    Opens a the file given by $path and reads the contents. If any "inject"
-    statements are presents they are replaced with content from recursive
-    loading templates specified.
-
-    The $hash_ref has all its keys used to create aliased aliased lexical
-    variables in to the prepared tempate sub routine.
-
-            eg
-                    my $hash={
-                            name=>"bob",
-                            age=>98
-                    };
-
-                    my $renderer-slurp_template "my_template.plex", $hash;
-
-
-                    #my_template.plex
-                    My name is $name and my age is $age
-
-    In this example the hash elements "{name}" and "{age}" are aliased so
-    lexical variables $name and $age which are directly accessable to the
-    template.
-
-   "prepare_template"
-            prepare_template 'template string', $hash_ref;
-
-
-            eg
-                    my $hash={
-                            name=>"bob",
-                            age=>98
-                    };
-
-                    my $template='My name is $name and my age is $age';
-
-                    my $renderer-slurp_template $template, $hash;
-
-    Similar to "slurp_tempalte", however, the template text is provided by a
-    string literal or scalar.
-
-  Template Only
-"inject"
-            @{[inject($path)}]
-
-            where $path is path to template file to inject
-
-    This special subroutine call is replaced with the contents of the
-    template at $path. Once it is replaced, any subsequent instances are
-    also processed recursively.
+    perl' templating modules, but that is a different beast. Also, I wanted
+    to use lexical aliasing as it can have good performance and style
+    benefits. Finally, instead of OO over management, a consice functional
+    API would be nice.
 
 TEMPLATE SYNTAX
     Well, its just perl. Seriously. A template is a perl program with the
     two following constraints:
 
-    1. The program consists only of (powerful) syntax permissible in a
-    double quoted string
+    1. The program consists only of perl syntax permissible in a double
+    quoted string
     2. The outermost double quote operators are ommited from the
     program/template
 
     This is best illustrated by example. The following shows a valid
-    (boring) template stored in a scalar:
+    (boring) template stored in a the scalar $template:
 
             my $template = 'this is a $adj template';
 
-    The two rules are satisfied. Firstly the syntax is valid for a double
-    quoted string (the $adj is a scalar to be interpolated into the
-    tempalte). Secondly the outer double quotes for the string are omitted.
+    Firstly, the text between the quotes would be a valid double quoted
+    string (the $adj is a scalar to be interpolated into the template).
+    Secondly the outer double quotes for the string are omitted.
 
     A template could also be stored in a file following the same two rules.
+    Suppose the following is store in a file on in the "__DATA__ " section:
 
             How many colours are in the rainbow? If you said $count  you would be correct
 
-    Again, the syntax is that of a double quoted interpolation and the outer
+    Again, the text is valid withing a double quoted operator and the outer
     double quotes are ommited.
 
+    Neat!
+
     In otherwords, template looks like plain text, but with double quoted
-    added is valid perl code.
+    added, it is valid perl code.
 
 THE POWER OF DOUBLE QUOTE INERPOLATION
     Perl has the abiliby to interpolate just about anything into a string.
@@ -160,29 +99,32 @@ THE POWER OF DOUBLE QUOTE INERPOLATION
 
             Accessing element $hash->{key} just for fun
 
-  Executing Subroutine statements
+  Executing a single (or list) of Statements
     To achieve this, a neat trick is to dereference an inline reference to
-    an annonynous array. The contents of the array is then the result of the
-    subroutine call. Sounds like alot but it is only a couple of braces:
+    an annonynous array. Thatis "@{[...]}". The contents of the array is
+    then the result of the statements. Sounds like a mouthful, but it is
+    only a couple of braces:
 
-            Calling the sub @{[ my_sub()} ]}
+            Calling a subrotine @{[ my_sub()} ]}
 
-    For comparison, this technique is only 1 more character to type than
-    similar embedded perl templates systems
+            Doing math $a + b = @{[ $a+$b ]}
 
-            Calling the sub <% my_sub() %>
+            I like the colours @{[ uc("red"),uc("blue")]}
 
-  Executing Multiplle Statements
+            My shoppling list @{[ join "\n", map uc, @items]}
+
+  Executing Multiple Statements
     The "do{}" construct executes a block, which can have any number of
     statements and returns the last statement executed into the template
 
-            Calling multiple statments @{[ do { my $a=1; $a++; ($a,-$a) } ]} in this template
+            Executing multiple statments @{[ do {
+                    my $a=1; 
+                    $a++; 
+                    ($a,-$a)
 
-  Other Examples
-   Simple mapping (single statement)
-            My shoppling list @{[ join "\n", map uc, @items]}
+                    } ]} in this template
 
-   Executing a BEGIN block
+  Using/Requiring Modules
     Again standard perl syntax for the win
 
             Template will call hi res time 
@@ -192,11 +134,76 @@ THE POWER OF DOUBLE QUOTE INERPOLATION
                     }
             ]}
 
-  MORE ON LEXICAL ALIASING
-    Any keys present in the hash when "prepare_template" or "slurp_template"
-    is called are used to construct lexical variables which are aliases to
-    the hash elements of the same key name. The hash itself is also aliased
-    to a variable called %fields
+API
+  "plex"
+            plex $path, $hash_ref, $root
+            where
+                    $path 
+                            the path to a template file to open and slurp
+                            or
+                            a already opend filehandle/glob reference
+                            or
+                            an array ref of strings joined into a template
+
+                    $hash_ref 
+                            hash ref with elements to alias
+
+                    $root 
+                            directory path to prepend to $path when template include other templates
+
+    If $path is a string, it is treated as a file path to a template file.
+    The file is opened and slurped with the content being used as the
+    template
+
+    If $path is filehandle, or GLOB ref, it is slurped. Can be used to use
+    "__DATA__" section as a template store
+
+    If $path is an array ref, the items of the array are joined into a
+    stirng, which is used directly as the template.
+
+    The $hash_ref provides variables to the template. Using refaliasing it
+    is aliased to %fields in the render subrotine. The top level items are
+    also aliased into the render subroutine.
+
+    $root Is a directory path which if present, is prepeneded to any file
+    path used "plex". This also applies to 'recursive' templates. This is
+    aliased into the rendere to a variable $root
+
+    The return value is subroutine reference, which when fills/executes the
+    template with data.
+
+            eg
+                    my $hash={
+                            name=>"bob",
+                            age=>98
+                    };
+                    my $template_dir="/path/to/dir";
+
+                    my $renderer=plex "template.plex", $hash, $template_dir;
+
+
+                    #/path/to/dir/template.plex
+                    My name is $name and my age is $age
+
+    In this example the hash elements "{name}" and "{age}" are aliased to
+    lexical variables $name and $age which are directly accessable to the
+    template.
+
+  "inject"
+            @{[inject($path)}]
+
+            where $path is path to template file to inject
+
+    This special subroutine call is replaced with the contents of the
+    template at $path. Once it is replaced, any subsequent instances are
+    also processed recursively.
+
+    Only applicable withing a template. This
+
+MORE ON LEXICAL ALIASING
+    Any keys present in the hash when "plex" is called are used to construct
+    lexical variables which are aliases to the hash elements of the same key
+    name. The hash itself is also aliased to a variable called %fields
 
     So for a $base_data hash like this:
 
@@ -210,11 +217,11 @@ THE POWER OF DOUBLE QUOTE INERPOLATION
 
             my $template='my name is $fields{name} and I am $fields{age}';
 
-    The first version uses the lexical variables skips the hash lookup,
-    which gives higher rendering rates. The caveat is that all fields must
-    exist at the time the template is prepared.
+    The first uses the lexical variables to skip the hash lookup, and
+    simpler style. The caveat is that all fields must exist at the time the
+    template is prepared.
 
-    To change the values and render the template the same $base_data
+    To change the values and render the template, the same $base_data
     variable must be manipulated. ie
 
             $base_data->{name}="Tim";
@@ -245,7 +252,7 @@ THE POWER OF DOUBLE QUOTE INERPOLATION
             my $base_data={name=>"jimbo", age=>10};
             my $override_data={name=>"Eva"};
 
-            my $render=prepare_template $template, $base_data;
+            my $render=plex $template, $base_data;
             my $string=$render($override_data);
             #string will be "my name is Eva and I am 10
 
