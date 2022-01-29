@@ -1,4 +1,5 @@
 use feature ":all";
+use strict;
 use warnings;
 #use strict;
 #no warnings "uninitialized";
@@ -10,7 +11,8 @@ use File::Spec::Functions qw<rel2abs>;
 my @items=qw<eggs watermellon hensteeth>;
 my $hash={
 	title=>"Mr",
-	surname=>"chick"
+	surname=>"chick",
+	items=>\@items
 };
 
 my $root=dirname __FILE__;
@@ -19,6 +21,7 @@ say "Root dir: $root";
 my $template=plex("external.plex", $hash, $root);
 
 say $template->();
+exit;
 $hash->{title}="GOGO";
 say $template->();
 

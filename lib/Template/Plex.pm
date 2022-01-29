@@ -2,6 +2,7 @@ package Template::Plex;
 use strict;
 use warnings;
 
+use Carp qw<croak>;
 use version; our $VERSION = version->declare('v0.1.0');
 use feature ":all";#qw<say state refaliasing>;
 no warnings "experimental";
@@ -19,7 +20,7 @@ our @EXPORT = qw(
 	plex
 );
 
-my $Inject=qr|\@\{\s*\[\s*inject\s*\(\s*(.*?)\s*\)\s*\] \s* \}|x;
+my $Inject=qr|\@\{\s*\[\s*include\s*\(\s*(.*?)\s*\)\s*\] \s* \}|x;
 
 
 # First argument the template string/text. This is any valid perl code
@@ -42,7 +43,7 @@ sub _prepare_template{
 	"sub {\nno warnings 'uninitialized';\n"
 	."no strict;\n"
 	."\\my %fields=shift//\\%fields;\n"
-	."my \$root=".($root?"\"$root\"":"undef").";\n"
+	."my \$__root__=".($root?"\"$root\"":"undef").";\n"
 	."qq{$data}; };\n";
 	my $ref=eval $string;
 	if($@ and !$ref){
@@ -83,19 +84,24 @@ sub _subst_inject {
 
 #Read an entire file and return the contents
 sub plex{
-	my ($path, $args, $root, $cb)=@_;
-	
+	my ($path, $args, $root)=@_;
+
 	my $data=do {
 		local $/=undef;
 		if(ref($path) eq "GLOB"){
+			croak "plexing glob  $path requires three arguments" unless @_==3;
+			say "FILEHANDLE";
 			#file handle
 			<$path>;
 		}
 		elsif(ref($path) eq "ARRAY"){
+			croak "plexing literal template '[$path]'  requires three arguments" unless @_==3;
+			say "LITERAL";
 			#process as inline template
 			join "", @$path;
 		}
 		else{
+			croak "plexing file template: '$path' requires three arguments" unless @_==3;
 			#Assume a path
 			#Prepend the root if present
 			$path=catfile $root, $path if $root;

@@ -9,9 +9,9 @@ This is the main template: Title in external is $title
 }
 ]}
 
+UNknown value: $a->[1]{wer};
+Items: @$items;
 @{['other perl code']}
 
-@{[inject("header.plex")]}
-
-	
-
+@{[ (plex("header.plex", \%fields, $__root__))->() ]}
+@{[include("header.plex")]}

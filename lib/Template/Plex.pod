@@ -174,16 +174,18 @@ Again standard perl syntax for the win
 	
 If C<$path> is a string, it is treated as a file path to a template file. The file is opened and slurped with the content being used as the template
 
-If C<$path> is filehandle, or GLOB ref, it is slurped. Can be used to use C<__DATA__> section as a template store
+If C<$path> is filehandle, or GLOB ref, it is slurped. Can be used to read C<__DATA__> containing a tempalte
 
 If C<$path> is an array ref, the items of the array are joined into a stirng, which is used directly as the template.
 
-The C<$hash_ref> provides variables to the template. Using refaliasing it is aliased to C<%fields> in the render subrotine. The top level items are also aliased into the render subroutine.
-
-$root Is a directory path which if present, is prepeneded to any file path used C<plex>. This also applies to 'recursive' templates. This is aliased into the rendere to a variable C<$root>
+The C<$hash_ref> provides variables to the template. Using refaliasing, it is aliased to C<%fields> hash in the render subrotine. Fields are accessable as a normal hash eg C<$fields{name}>
 
 
-The return value is subroutine reference, which when fills/executes the template with data.
+The top level items of the C<%fields> hash are also aliased into the render, using , using the key name. Note the key names must be valid for a variable name for this to operate
+
+C<$root> is a directory path which if present, is prepended to to the C<$path> parameter. It is also stored as a lexical variable in the render subroutine, to allow recursive C<plex> and C<include> calls
+
+The return value is subroutine reference, which when executed fills/executes the template with data.
 
 
 	eg
@@ -203,16 +205,17 @@ In this example the hash elements C<{name}> and C<{age}> are aliased to lexical 
 
 
 
-=head2 C<inject>
+=head2 C<include>
 
-	@{[inject($path)}]
+	@{[include($path)}]
 
 	where $path is path to template file to inject
 
-This special subroutine call is replaced with the contents of the template at C<$path>. Once it is replaced, any subsequent instances are also processed recursively.
+This special 'subroutine call' is replaced with the contents of the template at C<$path>. Once it is replaced, any subsequent instances are also processed recursively.
 
-Only applicable withing a template. This
+This API is only available in templates. The C<$path> has the current C<$root> active in the template prepended if it is defined.
 
+When a template is loaded by C<plex> the processing of this is subject to the C<no_include> option
 
 =head1 MORE ON LEXICAL ALIASING
 
