@@ -29,7 +29,9 @@ my $Inject=qr|\@\{\s*\[\s*include\s*\(\s*(.*?)\s*\)\s*\] \s* \}|x;
 sub _prepare_template{
 	\my $data=\shift;
 	my $href=shift;
-	my $root=shift;
+	my %opts=@_;
+
+
 	die "NEED A HASH REF " unless  ref $href eq "HASH" or !defined $href;
 	$href//={};
 	\my %fields=$href;	#hash ref
@@ -43,7 +45,8 @@ sub _prepare_template{
 	"sub {\nno warnings 'uninitialized';\n"
 	."no strict;\n"
 	."\\my %fields=shift//\\%fields;\n"
-	."my \$__root__=".($root?"\"$root\"":"undef").";\n"
+	#."my \$__root__=".($options{root}?"\"$options{root}\"":"undef").";\n"
+	."my %options=%opts;\n"
 	."qq{$data}; };\n";
 	my $ref=eval $string;
 	if($@ and !$ref){
@@ -55,7 +58,7 @@ sub _prepare_template{
 
 #a little helper to allow 'including' templates into each other
 sub _munge {
-	my ($input, $root)=@_;
+	my ($input, %options)=@_;
 
 	#test for literals
 	my $path;	
@@ -71,37 +74,39 @@ sub _munge {
 		#not supported?
 		#
 	}
-	plex($path,undef,$root);
+	plex($path,undef,%options);
 }
 
 sub _subst_inject {
-	\my $buffer=\$_[0];
-	my $root=$_[1];
-	while($buffer=~s|$Inject|_munge($1,$root)|e){
+	\my $buffer=\(shift);
+	#my $root=$_[1];
+	while($buffer=~s|$Inject|_munge($1, @_)|e){
 		#TODO: Possible point for diagnostics?
 	};
 }
 
 #Read an entire file and return the contents
 sub plex{
-	my ($path, $args, $root)=@_;
+	say @_;
+	my ($path, $args, %options)=@_;
+	my $root=$options{root};
+	croak "plex: even number of arguments required" if @_%2;
+	croak "plex: first argument must be defined" unless defined $path;
+	croak "plex: at least two arguments needed" if @_ < 2;
 
 	my $data=do {
 		local $/=undef;
 		if(ref($path) eq "GLOB"){
-			croak "plexing glob  $path requires three arguments" unless @_==3;
 			say "FILEHANDLE";
 			#file handle
 			<$path>;
 		}
 		elsif(ref($path) eq "ARRAY"){
-			croak "plexing literal template '[$path]'  requires three arguments" unless @_==3;
 			say "LITERAL";
 			#process as inline template
 			join "", @$path;
 		}
 		else{
-			croak "plexing file template: '$path' requires three arguments" unless @_==3;
 			#Assume a path
 			#Prepend the root if present
 			$path=catfile $root, $path if $root;
@@ -112,11 +117,11 @@ sub plex{
 	};
 	
 	#Perform inject substitution
-	_subst_inject($data, $root);
+	_subst_inject($data, root=>$root) unless $options{no_include};
 	if($args){
 		#Only call this from top level call
 		#Returns the render sub
-		_prepare_template($data, $args, $root);
+		_prepare_template($data, $args, %options);
 	}
 	else {
 		$data;

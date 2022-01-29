@@ -38,109 +38,119 @@ Template::Plex - Templates with Perl and Lexical Aliasing
 
 =head1 DESCRIPTION
 
-A very small, very powerful templating mechanism. After all, the template
-language is perl itself. No not embedded perl, just perl.  Its key goals and features are:
+A very small templating mechanism using perl as the template language. No, not
+embedded perl, just perl.  As perl is doing the heavy lifting in the syntax
+deparment, this module basically implements a 'shim' to make the perl languge
+work as a template language.
+
+Its key goals and features are:
 
 =over
 
-=item Templates are 99.9% perl syntax
+=item * Templates are 99.9% perl syntax
 
-=item Lexical aliasing for performance and style
+=item * Lexical aliasing for performance and style
 
-=item Include Templates withing templates easily
+=item * Include Templates withing templates easily
 
 =back
 
-This module uses the experimental feature B<refaliasing> which may or may not
-be around int later perl versions
+To achieve these goals, this module uses the experimental feature
+B<refaliasing> which may or may not be around int later perl versions
 
-As perl is doing the heavy lifting in the syntax deparment, the actual code is
-quite small. The documentaion is larger (significantly) in byte size. In that
-spirit, this module does no management of templates.
 
 =head1 MOTIATION
 
-So many templating systems available, but none of them that I know of actually
-use perl as the template language. There are lots of 'embedded perl' templating
-modules, but that is a different beast.  Also, I wanted to use lexical aliasing
-as it can have good performance and style benefits. Finally, instead of OO over
-management, a consice functional API would be nice.
+=over
 
-=head1 TEMPLATE SYNTAX
+=item *
 
-Well, its just perl. Seriously. A template is a perl program with the two following constraints:
+So many templating systems available, none use perl as the template language
 
-=over 
+=item * 
 
-=item 1. The program consists only of perl syntax permissible in a double quoted string
+The perl syntax C<@{[...]}>  to execute aritary statements in a double quoted
+string is only 1 more character then many other template langages custom
+syntax. Could be a consise approach to templating.
 
-=item 2. The outermost double quote operators are ommited from the program/template
+=item * 
+
+I wanted to use lexical aliasing as it can have good performance and
+style benefits. 
+
+=item * 
+
+Other templating system are overwhellming. Something consice would be nice
 
 =back
 
-This is best illustrated by example.  The following  shows a valid (boring)
-template stored in a the scalar C<$template>:
+=head1 PLEX TEMPLATE SYNTAX
 
-	my $template = 'this is a $adj template';
+Well, its just perl. Seriously. But if you arn't grasping the concept just yet,
+a L<Template::Plex> template is a perl program with the two following
+constraints:
 
-Firstly, the text between the quotes would be a valid double quoted string (the
-C<$adj> is a scalar to be interpolated into the template).
-Secondly the outer double quotes for the string are omitted.
+=over 
 
+=item * The program consists only of perl syntax permissible in a double quoted string
 
-A template could also be stored in a file following the same two rules. Suppose the following is store in a file on in the C<__DATA__ > section:
+=item * The outermost double quote operators are ommited from the program/template
+
+=back
+
+This is best illustrated by example. Suppose the following text is stored in a file or in the C<__DATA__ > section:
 
 	How many colours are in the rainbow? If you said $count  you would be correct
+	Here are the colors if you forgot;
+	@{[ map ucfirst."\n", @$colors ]}
+	Good day!
 
-Again, the text is valid withing a double quoted operator and the outer double quotes are
-ommited.
+Everthing in the text is valid syntax in double quote operator, but the outer double quote operateor is ommited.
+
+Or in otherwords, the template looks like plain text, but with double quoted added, it is valid perl code.
 
 Neat!
-
-In otherwords, template looks like plain text, but with double quoted added, it is valid perl code.
 
 =head1 THE POWER OF DOUBLE QUOTE INERPOLATION
 
 Perl has the abiliby to interpolate just about anything into a string. The
 following shows examples of valid perl syntax to get you salivating:
 
-=head3 Access to Scalars, Arrays and Hashes
+=head2 Access to Scalars, Arrays and Hashes
 
 	This template uses a $scalar and it will also
-
 	access the array element $array->[$index]
-
 	Accessing element $hash->{key} just for fun
 
 
 =head2 Executing a single (or list) of Statements
 
 To achieve this, a neat trick is to dereference an inline reference to an
-annonynous array. Thatis C<@{[...]}>. The contents of the array is then the
+annonynous array. That is C<@{[...]}>. The contents of the array is then the
 result of the statements.  Sounds like a mouthful, but it is only a couple of
-braces:
+braces and lets you do some powerful things:
 
-	Calling a subrotine @{[ my_sub()} ]}
+	Calling a subrotine @{[ my_sub() ]}
 
 	Doing math $a + b = @{[ $a+$b ]}
 
-	I like the colours @{[ uc("red"),uc("blue")]}
+	Building an array @{[ uc("red"),uc("blue")]}
 
-	My shoppling list @{[ join "\n", map uc, @items]}
-
+	Mapping @{[ join "\n", map uc, @items]}
 	
 
 =head2 Executing Multiple Statements
 
-The C<do{}> construct executes a block, which can have any number of statements
-and returns the last statement executed into the template
+When a single statement won't do, the C<do{}> construct executes a block, which
+can have any number of statements and returns the last statement executed into
+the template
 
 	Executing multiple statments @{[ do {
 	 	my $a=1; 
 		$a++; 
 		($a,-$a)
 
-		} ]} in this template
+	} ]} in this template
 
 =head2 Using/Requiring Modules
 
@@ -157,36 +167,52 @@ Again standard perl syntax for the win
 
 =head2 C<plex>
 
-	plex $path, $hash_ref, $root
-	where
-		$path 
-			the path to a template file to open and slurp
-			or
-			a already opend filehandle/glob reference
-			or
-			an array ref of strings joined into a template
+	plex $path, $hash_ref, %options
 
-		$hash_ref 
-			hash ref with elements to alias
 
-		$root 
-			directory path to prepend to $path when template include other templates
-	
+=over 
+
+=item C<$path>
+
 If C<$path> is a string, it is treated as a file path to a template file. The file is opened and slurped with the content being used as the template
 
 If C<$path> is filehandle, or GLOB ref, it is slurped. Can be used to read C<__DATA__> containing a tempalte
 
 If C<$path> is an array ref, the items of the array are joined into a stirng, which is used directly as the template.
 
+=item C<$hash_ref>
+
 The C<$hash_ref> provides variables to the template. Using refaliasing, it is aliased to C<%fields> hash in the render subrotine. Fields are accessable as a normal hash eg C<$fields{name}>
 
 
 The top level items of the C<%fields> hash are also aliased into the render, using , using the key name. Note the key names must be valid for a variable name for this to operate
 
-C<$root> is a directory path which if present, is prepended to to the C<$path> parameter. It is also stored as a lexical variable in the render subroutine, to allow recursive C<plex> and C<include> calls
+=item Options
 
-The return value is subroutine reference, which when executed fills/executes the template with data.
+These are non required arguments, but must be key value pairs when used. Currently supported options are
 
+Options are stored lexically in the the rendering sub for recursive C<plex> calls within a tempalte
+
+=over
+
+=item B<root>
+
+C<root> is a directory path, which if present, is prepended to to the C<$path>
+parameter.  
+
+
+=item B<no_include>
+
+Disables the uses of the preprocessor include feature. The template text will not be scanned and C<!{[include($path)]}> entries will not be replaced with text content located at C<$path>
+
+This doesn't impact recursive calls to C<plex> to dynamically/conditionally include templates.
+
+=back
+
+=item Return value
+
+The return value is subroutine reference, which when executed
+fills/executes the template with data.
 
 	eg
 		my $hash={
@@ -195,7 +221,7 @@ The return value is subroutine reference, which when executed fills/executes the
 		};
 		my $template_dir="/path/to/dir";
 
-		my $renderer=plex "template.plex", $hash, $template_dir;
+		my $renderer=plex "template.plex", $hash, root=>$template_dir;
 
 
 		#/path/to/dir/template.plex
@@ -204,6 +230,7 @@ The return value is subroutine reference, which when executed fills/executes the
 In this example the hash elements C<{name}> and C<{age}> are aliased to lexical variables C<$name> and C<$age> which are directly accessable to the template.
 
 
+=back
 
 =head2 C<include>
 

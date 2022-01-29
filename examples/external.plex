@@ -13,5 +13,5 @@ UNknown value: $a->[1]{wer};
 Items: @$items;
 @{['other perl code']}
 
-@{[ (plex("header.plex", \%fields, $__root__))->() ]}
+@{[ (plex("header.plex", \%fields, %options))->() ]}
 @{[include("header.plex")]}
