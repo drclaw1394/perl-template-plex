@@ -131,8 +131,7 @@ This doesn't impact recursive calls to C<plex> to dynamically/conditionally incl
 
 =item Return value
 
-The return value is subroutine reference, which when executed
-fills/executes the template with data.
+The return value is C<Template::Plex> object.
 
 	eg
 		my $hash={
@@ -141,7 +140,7 @@ fills/executes the template with data.
 		};
 		my $template_dir="/path/to/dir";
 
-		my $renderer=plex "template.plex", $hash, root=>$template_dir;
+		my $obj=plex "template.plex", $hash, root=>$template_dir;
 
 
 		#/path/to/dir/template.plex
@@ -151,6 +150,12 @@ In this example the hash elements C<{name}> and C<{age}> are aliased to lexical 
 
 
 =back
+
+=head2 C<render>
+
+	$obj->render();
+
+Method on render the template
 
 =head2 C<include>
 

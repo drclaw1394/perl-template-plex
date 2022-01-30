@@ -2,6 +2,7 @@ package Template::Plex;
 use strict;
 use warnings;
 
+use Symbol qw<delete_package>;
 use Carp qw<croak>;
 use version; our $VERSION = version->declare('v0.1.0');
 use feature ":all";#qw<say state refaliasing>;
@@ -20,13 +21,17 @@ our @EXPORT = qw(
 	plex
 );
 
-my $Inject=qr|\@\{\s*\[\s*include\s*\(\s*(.*?)\s*\)\s*\] \s* \}|x;
+my $Include=qr|\@\{\s*\[\s*include\s*\(\s*(.*?)\s*\)\s*\] \s* \}|x;
 
+use constant KEY_OFFSET=>0;
+use enum  ("package_=".KEY_OFFSET, qw<sub_>);
+use constant KEY_COUNT=>sub_-package_+1;
 
 # First argument the template string/text. This is any valid perl code
 # Second argument is a hash ref to default or base level fields
 # returns a code reference which when called renders the template with the values
 sub _prepare_template{
+	my $self=shift;
 	\my $data=\shift;
 	my $href=shift;
 	my %opts=@_;
@@ -43,6 +48,7 @@ sub _prepare_template{
 	}
 	state $package="plex0";
 	$package++;
+	$self->[package_]=$package;
 	$string.=
 	"package $package;\n"			#unique package for dynamic templates variables
 	."*plex=*Template::Plex::plex;\n"	#Add plex symbol for recursive calls
@@ -50,6 +56,7 @@ sub _prepare_template{
 	."no warnings 'uninitialized';\n"	#Disable warnings for uninitialised variables
 	."no strict;\n"				#Non existant variables don't stop execution
 	#."no feature qw<indirect>;\n"		#
+	."my \$self=shift;\n"
 	."\\my %fields=shift//\\%fields;\n"
 	#."my \$__root__=".($options{root}?"\"$options{root}\"":"undef").";\n"
 	."my %options=%opts;\n"
@@ -59,7 +66,17 @@ sub _prepare_template{
 		print  $@;
 		print  $!;
 	}
-	$ref;
+	$self->[sub_]=$ref;
+	$self;
+}
+
+sub render {
+	$_[0][sub_](@_);
+}
+
+sub DESTROY {
+	say "IN DESTROY";
+	delete_package $_[0][package_] if $_[0][package_];
 }
 
 #a little helper to allow 'including' templates into each other
@@ -86,14 +103,18 @@ sub _munge {
 sub _subst_inject {
 	\my $buffer=\(shift);
 	#my $root=$_[1];
-	while($buffer=~s|$Inject|_munge($1, @_)|e){
+	while($buffer=~s|$Include|_munge($1, @_)|e){
 		#TODO: Possible point for diagnostics?
 	};
 }
 
-#Read an entire file and return the contents
 sub plex{
-	say @_;
+	__PACKAGE__->new(@_)
+}
+
+#Read an entire file and return the contents
+sub new{
+	my $self=bless [], shift;
 	my ($path, $args, %options)=@_;
 	my $root=$options{root};
 	croak "plex: even number of arguments required" if @_%2;
@@ -103,12 +124,10 @@ sub plex{
 	my $data=do {
 		local $/=undef;
 		if(ref($path) eq "GLOB"){
-			say "FILEHANDLE";
 			#file handle
 			<$path>;
 		}
 		elsif(ref($path) eq "ARRAY"){
-			say "LITERAL";
 			#process as inline template
 			join "", @$path;
 		}
@@ -116,7 +135,6 @@ sub plex{
 			#Assume a path
 			#Prepend the root if present
 			$path=catfile $root, $path if $root;
-			say "PATH: $path";
 			my $fh;
 			<$fh> if open $fh, "<", $path;
 		}
@@ -127,7 +145,7 @@ sub plex{
 	if($args){
 		#Only call this from top level call
 		#Returns the render sub
-		_prepare_template($data, $args, %options);
+		$self->_prepare_template($data, $args, %options);
 	}
 	else {
 		$data;

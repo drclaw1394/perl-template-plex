@@ -20,7 +20,7 @@ my $root=dirname __FILE__;
 say "Root dir: $root";
 my $template=plex("external.plex", $hash, root=>$root, no_include=>0);
 
-say $template->();
+say $template->render();
 exit;
 ##################################################################
 # $hash->{title}="GOGO";                                         #
