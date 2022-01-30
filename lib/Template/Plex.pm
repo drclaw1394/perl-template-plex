@@ -41,9 +41,15 @@ sub _prepare_template{
 	for my $k (keys %fields){
 		$string.= "\\my \$$k=\\\$fields{$k};\n";
 	}
+	state $package="plex0";
+	$package++;
 	$string.=
-	"sub {\nno warnings 'uninitialized';\n"
-	."no strict;\n"
+	"package $package;\n"			#unique package for dynamic templates variables
+	."*plex=*Template::Plex::plex;\n"	#Add plex symbol for recursive calls
+	."sub {\n"
+	."no warnings 'uninitialized';\n"	#Disable warnings for uninitialised variables
+	."no strict;\n"				#Non existant variables don't stop execution
+	#."no feature qw<indirect>;\n"		#
 	."\\my %fields=shift//\\%fields;\n"
 	#."my \$__root__=".($options{root}?"\"$options{root}\"":"undef").";\n"
 	."my %options=%opts;\n"

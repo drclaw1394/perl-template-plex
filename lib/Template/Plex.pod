@@ -47,11 +47,11 @@ Its key goals and features are:
 
 =over
 
-=item * Templates are 99.9% perl syntax
+=item * Templates are written in perl syntax
 
 =item * Lexical aliasing for performance and style
 
-=item * Include Templates withing templates easily
+=item * 'Include' Templates within templates easily
 
 =back
 
@@ -84,91 +84,11 @@ Other templating system are overwhellming. Something consice would be nice
 
 =back
 
-=head1 PLEX TEMPLATE SYNTAX
-
-Well, its just perl. Seriously. But if you arn't grasping the concept just yet,
-a L<Template::Plex> template is a perl program with the two following
-constraints:
-
-=over 
-
-=item * The program consists only of perl syntax permissible in a double quoted string
-
-=item * The outermost double quote operators are ommited from the program/template
-
-=back
-
-This is best illustrated by example. Suppose the following text is stored in a file or in the C<__DATA__ > section:
-
-	How many colours are in the rainbow? If you said $count  you would be correct
-	Here are the colors if you forgot;
-	@{[ map ucfirst."\n", @$colors ]}
-	Good day!
-
-Everthing in the text is valid syntax in double quote operator, but the outer double quote operateor is ommited.
-
-Or in otherwords, the template looks like plain text, but with double quoted added, it is valid perl code.
-
-Neat!
-
-=head1 THE POWER OF DOUBLE QUOTE INERPOLATION
-
-Perl has the abiliby to interpolate just about anything into a string. The
-following shows examples of valid perl syntax to get you salivating:
-
-=head2 Access to Scalars, Arrays and Hashes
-
-	This template uses a $scalar and it will also
-	access the array element $array->[$index]
-	Accessing element $hash->{key} just for fun
-
-
-=head2 Executing a single (or list) of Statements
-
-To achieve this, a neat trick is to dereference an inline reference to an
-annonynous array. That is C<@{[...]}>. The contents of the array is then the
-result of the statements.  Sounds like a mouthful, but it is only a couple of
-braces and lets you do some powerful things:
-
-	Calling a subrotine @{[ my_sub() ]}
-
-	Doing math $a + b = @{[ $a+$b ]}
-
-	Building an array @{[ uc("red"),uc("blue")]}
-
-	Mapping @{[ join "\n", map uc, @items]}
-	
-
-=head2 Executing Multiple Statements
-
-When a single statement won't do, the C<do{}> construct executes a block, which
-can have any number of statements and returns the last statement executed into
-the template
-
-	Executing multiple statments @{[ do {
-	 	my $a=1; 
-		$a++; 
-		($a,-$a)
-
-	} ]} in this template
-
-=head2 Using/Requiring Modules
-
-Again standard perl syntax for the win
-
-	Template will call hi res time 
-	The time is: @{[ time ]}
-	@{[ BEGIN {
-		use Time::HiRes qw<time>;
-		}
-	]}
-
 =head1 API
 
 =head2 C<plex>
 
 	plex $path, $hash_ref, %options
-
 
 =over 
 
@@ -243,6 +163,89 @@ This special 'subroutine call' is replaced with the contents of the template at 
 This API is only available in templates. The C<$path> has the current C<$root> active in the template prepended if it is defined.
 
 When a template is loaded by C<plex> the processing of this is subject to the C<no_include> option
+
+=head1 PLEX TEMPLATE SYNTAX
+
+Well, its just perl. Seriously. But if you arn't grasping the concept just yet,
+a L<Template::Plex> template is a perl program with the two following
+constraints:
+
+=over 
+
+=item * The program consists only of perl syntax permissible in a double quoted string
+
+=item * The outermost double quote operators are ommited from the program/template
+
+=back
+
+This is best illustrated by example. Suppose the following text is stored in a file or in the C<__DATA__ > section:
+
+	The pot of gold at the end of the rainbow has $amount gold coins
+	As for the rainbow, the colors are:
+	@{[ map ucfirst."\n", @$colors ]}
+	Good day!
+
+Everthing in the text is valid syntax in double quote operator, but the outer double quote operateor is ommited.
+
+Or in otherwords, the template looks like plain text, but with double quoted added, it is valid perl code.
+
+Neat!
+
+Following sections show example of particular scenarios
+
+=head2 Access to Existing Scalars, Arrays and Hashes
+
+	This template uses a $scalar and it will also
+	access the array element $array->[$index]
+	Accessing element $hash->{key} just for fun
+
+
+=head2 Executing a single (or list) of Statements
+
+To achieve this, a neat trick is to dereference an inline reference to an
+annonynous array. That is C<@{[...]}>. The contents of the array is then the
+result of the statements.  Sounds like a mouthful, but it is only a couple of
+braces and lets you do some powerful things:
+
+	Calling a subrotine @{[ my_sub() ]}
+	Declaring a variable @{[ my $variable=1; ]};	
+	Doing math a + b = @{[ $a+$b ]}
+	Building an array @{[ uc("red"),uc("blue")]}
+	Mapping @{[ join "\n", map uc, @items]}
+	
+
+=head2 Executing Multiple Statements
+
+When a single statement won't do, the C<do{}> construct executes a block, which
+can have any number of statements and returns the last statement executed into
+the template
+
+	Executing multiple statments @{[ do {
+	 	my $a=1; 
+		$a++; 
+		($a,-$a)
+
+	} ]} in this template
+
+=head2 Using/Requiring Modules
+
+Again standard perl syntax for the win
+
+	Template will call hi res time 
+	The time is: @{[ time ]}
+	@{[ BEGIN {
+		use Time::HiRes qw<time>;
+		}
+	]}
+
+=head2 Declaring Variables
+
+Variables can be declared in the C<@{[..}]> container. 
+package variables..
+
+lexical
+
+
 
 =head1 MORE ON LEXICAL ALIASING
 
