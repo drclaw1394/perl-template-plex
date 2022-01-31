@@ -2,7 +2,9 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
     NAME              => 'Template::Plex',
     VERSION_FROM      => 'lib/Template/Plex.pm', 
-    PREREQ_PM         => {}, # e.g., Module::Name => 1.1
+    PREREQ_PM         => {
+    				enum=>0
+			}, 
     ABSTRACT_FROM     => 'lib/Template/Plex.pod', # retrieve abstract from module
     AUTHOR            => 'Ruben Westerberg <drclaw@mac.com>',
     LICENSE           => 'mit',
