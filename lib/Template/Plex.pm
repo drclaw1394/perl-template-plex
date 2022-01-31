@@ -75,7 +75,6 @@ sub render {
 }
 
 sub DESTROY {
-	say "IN DESTROY";
 	delete_package $_[0][package_] if $_[0][package_];
 }
 

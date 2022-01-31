@@ -5,6 +5,5 @@ Header sub tempalte:
 	"Do string interp here whe calculation $var";
 } ]}
 
-
 This is the header sub template: title is  $title $surname;
 and var is $var and package is $package
