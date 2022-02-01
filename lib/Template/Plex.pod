@@ -1,6 +1,6 @@
 =head1 NAME
 
-Template::Plex - Templates with (P)erl and (Lex)ical Aliasing
+Template::Plex - Templates in (P)erl using (Lex)ical Aliasing
 
 =head1 SYNOPSIS
 
@@ -62,10 +62,10 @@ with the outer operators removed:
 Because of the powerful and flexible interpolation of strings in perl, you can
 do just about anything in the templates. After all the template is just perl. 
 
-The 'lexical' part of this modules is the fact variables can be aliased into
+The 'lexical' part of this modules is due to ability of variables to be aliased into
 the template (more on this below). It improves the style and use of variables
-in the template. It also provides an alternative approach for modifying the
-variables without rendering the template immediately
+in the template. It also allows the external system to operate on its own
+variables,without knowledge of the template mechanism
 
 Some feature highlights:
 
@@ -98,14 +98,13 @@ So many templating systems available, none use perl as the template language?
 =item * 
 
 Lexical aliasing allows the input variables to be accessed directly by name
-(i.e. C<$name>) instead of as a member of a hash (i.e. C<$fields-\>{name}> ) or
-by delimiting with custom syntax
+(i.e. C<$name>) instead of as a member of a hash ref (i.e. C<$fields-E<gt>{name}>) or by delimiting with custom syntax
 
 =item * 
 
-The perl syntax C<@{[...]}>  will to execute arbitrary perl statements in a
-double quoted string. That's the hardest part of a template system... and perl
-makes it free!
+The perl syntax C<@{[...]}>  will execute arbitrary perl statements in a double
+quoted string. That's the hardest part of a template system and perl does it
+for us
 
 =item * 
 
@@ -114,22 +113,6 @@ leverages perl to have a more concise API.
 
 =back
 
-=head1 POTENTIAL PROBLEMS
-
-=head2 Unbalanced Delimiter Pairs
-
-Perl double quote operators are smart and work on balanced pairs of delimiters.
-This allows for the delimiters to appear in the text body without error.
-
-However if your template doesn't have balanced pairs (i.e. a missing "}" in
-javascript/c/perl/etc), the template will fail to compile and give a strange
-error.
-
-If you know you don't have balanced delimiters, then you can escape them with a
-backslash
-
-Currently L<Template::Plex> delimiter used is B<{ }>.  It isn't changeable in
-this version.
 
 
 =head1 API
@@ -143,7 +126,7 @@ around C<new> . Please see C<new> below for details.
 
 =head2 C<new>
 
-	Template::Plex->new($path, $variables_hash, %options
+	Template::Plex->new($path, $variables_hash, %options)
 
 Creates a new instance of a template, loaded from a scalar, file path or an
 existing file handle. Template is prepared and ready to be rendered after
@@ -263,9 +246,9 @@ template
 
 Used in templates only.
 
-This is a special directive that substitutes the text B<@{[include("path")]}> with
-the contents of the file pointed to by path. This is a preprocessing step which
-happens before the template is prepared for execution
+This is a special directive that substitutes the text B<@{[include("path")]}>
+with the contents of the file pointed to by path. This is a preprocessing step
+which happens before the template is prepared for execution
 
 
 This API is only available in templates. If C<root> was included in the options
@@ -276,7 +259,7 @@ subject to the C<no_include> option. If C<no_include> is specified, any
 template text that contains the C<@{[include("path")}]> text will result in a
 syntax error
 
-=head1 PLEX TEMPLATE SYNTAX
+=head1 PLEX TEMPLATE SYNTAX \w EXAMPLES
 
 Well, its just perl. Seriously. But if you aren't grasping the concept just
 yet, a L<Template::Plex> template is a perl program with the two following
@@ -284,9 +267,9 @@ constraints:
 
 =over 
 
-=item * The program consists only of perl syntax permissible in a double quoted string
+=item * consists only of perl syntax permissible in a double quoted string
 
-=item * The outermost double quote operators are ommited from the program/template
+=item * outermost double quote operators are ommited from the program/template
 
 =back
 
@@ -401,67 +384,107 @@ Sub templates loaded with C<include> will have direct access to the package
 variables. However, recursive sub templates will need to have the variables
 passed in the call to C<new> or C<plex>
 
+=head1 TIPS ON USAGE
 
-=head1 MORE ON LEXICAL ALIASING
+=head2 Points to note
 
-Any keys present in the hash when C<plex> is called are used to construct
-lexical variables which are aliases to the hash elements of the same key name.
-The hash itself is also aliased to a variable called C<%fields> 
+=over 
 
-So for a C<$base_data> hash like this:
+=item * Aliasing is a two way steet
 
-	my $base_data={name=>"jimbo", age=>10};
+Changes made to aliased variables external to the template are available inside
+the template (one of the main  tenets of this module)
 
-The template can access the fields "name" and age like this:
+Changes make to aliased variables internal to the template are available outside
+the template.
 
-	my $template='my name is $name an I am $age';
+=item * Unbalanced Delimiter Pairs
 
-or like this:
-	
-	my $template='my name is $fields{name} and I am $fields{age}';
+Perl double quote operators are smart and work on balanced pairs of delimiters.
+This allows for the delimiters to appear in the text body without error.
 
-The first uses the lexical variables to skip the hash lookup, and simpler
-style.  The caveat is that all fields must exist at the time the template is
-prepared.
+However if your template doesn't have balanced pairs (i.e. a missing "}" in
+javascript/c/perl/etc), the template will fail to compile and give a strange
+error.
 
-To change the values and render the template, the same C<$base_data> variable
-must be manipulated. i.e.
+If you know you don't have balanced delimiters, then you can escape them with a
+backslash
 
-	$base_data->{name}="Tim";
-	$render->();
+Currently L<Template::Plex> delimiter pair used is B<{ }>.  It isn't changeable in
+this version.
 
-This still performs no hash lookups in the rendering and is a very quick way of
-rendering the changing data.
+=item  * Explicit inclusion of top level variables into sub templates 
 
+For sub templates which use the C<include> mechanism, they become part of the
+top level template. As such, they have access to the lexically aliased
+variables and package variables automatically.
 
-=head2 NOT USING LEXICAL ALIASING 
+However, if you recursively use C<new> or C<plex>, you would need to manually
+pass any variables you need to the sub template. Changes to the original
+aliased variables inside and outside the template will still propagate into the
+sub template.
 
-If the data to apply to the template completely changes, it can be passed as a
-hash ref to the render code reference.
+=item  * Are you sure it's one statement?
 
-	my $new_variable={name=>data};
-	$render->($new_variable);
+If you are having trouble with C<@{[...]}>, remember the result of the last
+statement is returned into the template.
+
+Example of single statements
+
+	@{[time]}			#Calling a sub and injecting result
+	@{[$a,$b,$c,time,my_sub]}	#injecting list
+	@{[our $temp=1]}		#create a variable and inject 
+	@{[our ($a,$b,$c)=(7,8,9)]}	#declaring a
+
+If you are declaring a package variable, you might not want its value injected
+into the template at that point.  so instead you could use C<do{..}> execute
+multiple statements, with the last statement being an empty string (or the
+value you want returned into the template).
+
+	@{[ do {our $temp=1;""} }];
+
+=back
+
+=head2  More on input variables
+
+If the variables to apply to the template completely change (note: variables
+not values), then the aliasing setup during a C<plex> or C<new> call will not
+reflect what you want.
+
+However the C<render> method call allows a hash ref containing values to use.
+The hash is aliased to the C<%fields> variable in the template.
+
+	my $new_variables={name=>data};
+	$template->render($new_variables);
 
 However to use this data the template must be constructed to access the fields
 directly:
 
 	my $template='my name is $fields{name} and I am $fields{age}';
 
-=head2 HYBRID ACCESS
+Note that the C<%field> is aliased so any changes to it is reflected outside
+the template
 
-This is interesting. The template can refer to the lexical aliases and the
-direct fields at the same time. The lexical aliases only refer to the data
-provided at preparation time, while the field refer to the latest data
-provided:
+
+Interestingly the template can refer to the lexical aliases and the direct
+fields at the same time. The lexical aliases only refer to the data provided at
+preparation time, while the C<%fields> refer to the latest data provided during
+a C<render> call:
 
 	my $template='my name is $fields{name} and I am $age
+
 	my $base_data={name=>"jimbo", age=>10};
+
 	my $override_data={name=>"Eva"};
 
-	my $render=plex $template, $base_data;
-	my $string=$render($override_data);
+	my $template=plex $template, $base_data;
+
+	my $string=$template->render($override_data);
 	#string will be "my name is Eva and I am 10
 
+As an example, this could be used to 'template a template' with global, slow
+changing variables stored as the aliased variables, and the fast changing, per
+render data being supplied as needed.
 
 =head1 SECURITY
 
@@ -469,15 +492,19 @@ This module uses C<eval> to generate the code ref for rendering. This means
 that your template, being perl code, is being executed. If you do not know what
 is in your templates, then maybe this module isn't for you.
 
+Aliasing means that the template has access to variables outside of it.
+That's the whole point. So again if you don't know what your templates are
+doing, then maybe this module isn't for you
+
 =head1 SEE ALSO
 
 Yet another template module right? 
 
 Do a search on CPAN for 'template' and make a cup of coffee.
 
-=head1 REPOSITORY
+=head1 REPOSITORY and BUG REPORTING
 
-Code is hosted on L<GitHub|http://github.com/drclaw1394/perl-template-plex>
+Please report any bugs and feature requests on the repo page: L<GitHub|http://github.com/drclaw1394/perl-template-plex>
 
 =head1 AUTHOR
 

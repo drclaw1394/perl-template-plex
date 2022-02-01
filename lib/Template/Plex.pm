@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 use Symbol qw<delete_package>;
-use Carp qw<croak>;
+use Carp qw<carp croak>;
 use version; our $VERSION = version->declare('v0.1.0');
 use feature ":all";#qw<say state refaliasing>;
 no warnings "experimental";
@@ -135,7 +135,15 @@ sub new{
 			#Prepend the root if present
 			$path=catfile $root, $path if $root;
 			my $fh;
-			<$fh> if open $fh, "<", $path;
+			if(open $fh, "<", $path){
+				<$fh> 
+			}
+			else {
+				carp "Could not open file: $path $!";
+				"";
+			}
+
+
 		}
 	};
 
