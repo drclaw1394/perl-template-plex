@@ -96,7 +96,7 @@ sub _munge {
 		#not supported?
 		#
 	}
-	plex($path,undef,%options);
+	plex($path,"",%options);
 }
 
 sub _subst_inject {
@@ -111,14 +111,14 @@ sub plex{
 	__PACKAGE__->new(@_)
 }
 
-#Read an entire file and return the contents
+#Read an  undefentire file and return the contents
 sub new{
 	my $self=bless [], shift;
 	my ($path, $args, %options)=@_;
 	my $root=$options{root};
 	croak "plex: even number of arguments required" if @_%2;
 	croak "plex: first argument must be defined" unless defined $path;
-	croak "plex: at least two arguments needed" if @_ < 2;
+	croak "plex: at least 2 arguments needed" if @_ < 2;
 
 	my $data=do {
 		local $/=undef;
@@ -138,6 +138,8 @@ sub new{
 			<$fh> if open $fh, "<", $path;
 		}
 	};
+
+	$args//={};		#set to empty hash if not defined
 	
 	#Perform inject substitution
 	_subst_inject($data, root=>$root) unless $options{no_include};

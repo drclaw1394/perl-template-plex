@@ -42,7 +42,7 @@ This module is a small mechanism to facilitate the use of perl (not embedded
 perl) as a text processing template language. 
 
 Conceptually, a Plex template is just complex string in double quoted context,
-with the outer operators removed. So instead of
+with the outer operators removed:
 	
 	#PERL
 	"This is is a perl string interpolating @{[ map uc, qw<a b c d>]}"
@@ -58,8 +58,14 @@ with the outer operators removed. So instead of
 	#OUTPUT is the same for all of the above:
 	This is is a perl string interpolating A B C D
 
+
 Because of the powerful and flexible interpolation of strings in perl, you can
-do just about anything in in the templates. After all the template is just perl
+do just about anything in the templates. After all the template is just perl. 
+
+The 'lexical' part of this modules is the fact variables can be aliased into
+the template (more on this below). It improves the style and use of variables
+in the template. It also provides an alternative approach for modifying the
+variables without rendering the template immediately
 
 Some feature highlights:
 
@@ -77,7 +83,7 @@ Some feature highlights:
 
 =item * Declare variables and subroutines in templates
 
-=item * C<use> other modules direclty in templates
+=item * C<use> other modules directly in templates
 
 =back
 
@@ -95,19 +101,36 @@ Lexical aliasing allows the input variables to be accessed directly by name
 (i.e. C<$name>) instead of as a member of a hash (i.e. C<$fields-\>{name}> ) or
 by delimiting with custom syntax
 
-
 =item * 
 
 The perl syntax C<@{[...]}>  will to execute arbitrary perl statements in a
-double quoted string.  It is only 1 more character then many other template
-languages custom syntax to execute perl statements in a template.
+double quoted string. That's the hardest part of a template system... and perl
+makes it free!
 
 =item * 
 
-Other templating system are very powerful, but have huge a huge APIs. This Plex
-leverages perl to be more consise
+Other templating system are very powerful, but have huge a huge APIs. Plex
+leverages perl to have a more concise API.
 
 =back
+
+=head1 POTENTIAL PROBLEMS
+
+=head2 Unbalanced Delimiter Pairs
+
+Perl double quote operators are smart and work on balanced pairs of delimiters.
+This allows for the delimiters to appear in the text body without error.
+
+However if your template doesn't have balanced pairs (i.e. a missing "}" in
+javascript/c/perl/etc), the template will fail to compile and give a strange
+error.
+
+If you know you don't have balanced delimiters, then you can escape them with a
+backslash
+
+Currently L<Template::Plex> delimiter used is B<{ }>.  It isn't changeable in
+this version.
+
 
 =head1 API
 
@@ -145,9 +168,11 @@ which is used directly as the template.
 
 =item C<$variables_hash>
 
-This is a required argument but can be C<undef>.
+This is a required argument but can be an empty hash ref C<{}> or C<undef>.
 
-The C<$variables_hash> provides variables to the template. It is aliased to C<%fields> variable (note the %) and directly usable in the template like a normal hash e.g. C<$fields{name}>
+The C<$variables_hash> provides variables to the template. It is aliased to
+C<%fields> variable (note the %) and directly usable in the template like a
+normal hash e.g. C<$fields{name}>
 
 In addition, the top level items of the C<%fields> hash are also aliased into
 the template using the key name (key names must be valid for a variable name
@@ -159,9 +184,9 @@ C<$name>.
 It also means any external modification of the items in C<$variable_hash> will
 be visible in the template.
 
-If the C<$variables_hash> is undef, then no variables will be lexically
-aliased. The only variables accessible to the template will be via the
-C<render> method call
+If the C<$variables_hash> is and empty hash ref C<{}> or C<undef> then no
+variables will be lexically aliased. The only variables accessible to the
+template will be via the C<render> method call
 
 =item Options
 
@@ -337,9 +362,44 @@ Again standard perl syntax for the win
 
 =head2 Declaring Variables
 
-TODO
 Variables can be declared in the C<@{[..}]> container. 
 
+C<my> variables will only be visible within the C<@{[..]}> block it was defined.
+	
+	eg	#render a mini single line template with my variable
+		@{[ do {
+			my $a=time;
+			$a+=23;
+			"Time is: $a";	
+		} }]
+
+	eg	#Recursively load and render a template with my variables
+		@{[ do {
+			my $hash={carrots=>20};
+			my $t=plex "sub/template.plex" ,$hash;
+			$t->render;
+		}]}
+
+C<our> variables can be used instead of C<my> variables and are visible
+throughout template:
+
+	eg
+		@{[ do {
+			our $a=time;
+			"";
+		} }]
+		
+		Template package variable is $a
+
+		@{[ do {
+			$a+23:
+			""
+		} ]}
+		Updated template package variable is $a
+
+Sub templates loaded with C<include> will have direct access to the package
+variables. However, recursive sub templates will need to have the variables
+passed in the call to C<new> or C<plex>
 
 
 =head1 MORE ON LEXICAL ALIASING
@@ -409,18 +469,15 @@ This module uses C<eval> to generate the code ref for rendering. This means
 that your template, being perl code, is being executed. If you do not know what
 is in your templates, then maybe this module isn't for you.
 
-To mitigate the security risk, the rendering code refs should be generated  and
-cached, so they are not needing to be run during normal execution. That will
-provide faster rendering and also, prevent unknown templates from accidentally
-being executed.
-
-
 =head1 SEE ALSO
 
 Yet another template module right? 
 
 Do a search on CPAN for 'template' and make a cup of coffee.
 
+=head1 REPOSITORY
+
+Code is hosted on L<GitHub|http://github.com/drclaw1394/perl-template-plex>
 
 =head1 AUTHOR
 
