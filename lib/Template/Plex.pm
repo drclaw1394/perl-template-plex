@@ -74,6 +74,10 @@ sub render {
 	$_[0][sub_](@_);
 }
 
+sub sub {
+	$_[0][sub_];
+}
+
 sub DESTROY {
 	delete_package $_[0][package_] if $_[0][package_];
 }
