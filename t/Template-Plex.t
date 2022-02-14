@@ -1,6 +1,8 @@
 use strict;
 use warnings;
 
+use Data::Dumper;
+$Data::Dumper::Deparse=1;
 use Test::More tests => 6;
 BEGIN { use_ok('Template::Plex') };
 use Template::Plex;
@@ -8,22 +10,32 @@ my $default_data={data=>[1,2,3,4]};
 
 my $template=q|@{[
 	do {
+		#my $sub='Sub template: $data->@*';
 		my $s="";
 		for my $d ($fields{data}->@*) {
 			$s.="row $d\n"
 		}
+		#say "Lexical Plex: ",Dumper \&plex;
+		#say "DOING SUB PLEX ", my $t=plex([$sub], {});
+		#say $t->sub;
+		#say $t->sub->();
+		#$s.$t->sub()->();
 		$s;
+
+
 	}
 ]}|;
 
 
 $template=plex [$template], $default_data;
 my $result=$template->render();
+print "RESULT: $result";
 my $expected="";
 for(1,2,3,4){
 	$expected.="row $_\n";
 }
 ok $result eq $expected, "Base values";
+
 
 
 
@@ -76,3 +88,8 @@ $template=plex [$template], $default_data;
 $result=$template->render($override_data);
 $expected="";
 ok $result eq "my name is John not Jill", "Lexical and override access"
+
+
+
+
+#TODO: Recursive access testing
