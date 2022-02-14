@@ -37,7 +37,7 @@ sub lexical{
 	\my %fields=$href;
 
 	my $string="";
-	say "Fields: ", %fields;
+	#say "Fields: ", %fields;
 	for my $k (keys %fields){
 		$string.= "\\my \$$k=\\\$fields{$k};\n";
 	}
@@ -49,14 +49,18 @@ sub  bootstrap{
 	my $self=shift;
 	\my $_data_=\shift;
 	my $href=shift;
+	my %opts=@_;
 
 	$href//={};
 	\my %fields=$href;
-	say "FIELDS are: ",%fields;
-	my %opts=@_;
+	#say "FIELDS are: ",%fields;
+	#my %opts=@_;
 
 my $out="{";
+
 $out.= '	\my %fields=$href;
+';
+$out.='		my %options=%opts;
 ';
 $out.=lexical($href);		#add aliased variables	from hash
 $out.='
@@ -69,10 +73,12 @@ $out.='
 		$href//={};
 		\my %fields=$href;
 		';
+	#need this to prevent variables going out of scope
+	for my $k (keys %fields){
+		$out.= "1 or \$$k;\n";
+	}
 
-		#$out.=lexical($href);		#add aliased variables	from hash
 $out.='
-		#say "DATA IS: $data in PREPARE";
 		my $ref=eval bootstrap (@_);
 		#say "REF IN PREPARE SUB: ", Dumper $ref;
 		if($@ and !$ref){
@@ -104,7 +110,6 @@ sub {
 	say "Template is: ",Dumper @_;
 	my $self=shift;
 	\\my %fields=shift//\\%fields;
-	my %options=%opts;
 ';
 
 
@@ -122,9 +127,12 @@ $out;
 # Second argument is a hash ref to default or base level fields
 # returns a code reference which when called renders the template with the values
 sub _prepare_template{
-	my $self=$_[0];
-	#my $_data_=\$_[1];
-	my $href=$_[2];
+	my ($self, undef,$href,%opts)=@_;
+        #######################
+        # my $self=$_[0];     #
+        # #my $_data_=\$_[1]; #
+        # my $href=$_[2];     #
+        #######################
 
 	$href//={};
 	\my %fields=$href;
