@@ -1,4 +1,5 @@
-Template-Lexical-v\d+\.\d+.\d+\.tar\.gz
+Template-Plex-v\d+\.\d+.\d+\.tar\.gz
+temp
 #!start included /opt/local/lib/perl5/5.34/ExtUtils/MANIFEST.SKIP
 # Avoid version control files.
 \bRCS\b
