@@ -3,9 +3,7 @@ examples/begin.pl
 examples/examples.pl
 examples/experiment.pl
 examples/external.plex
-examples/external.tpl
 examples/header.plex
-examples/header.tpl
 examples/html.pl
 examples/html.plex
 examples/recursive-2.plex
@@ -13,16 +11,12 @@ examples/recursive-3.plex
 examples/recursive-top.pl
 examples/recursive-top.plex
 examples/recursive.pl
-lib/Template/Lexical.pm
-lib/Template/Lexical.pod
 lib/Template/Plex.pm
 lib/Template/Plex.pod
 Makefile.PL
-MANIFEST
+MANIFEST			This list of files
 MANIFEST.SKIP
-pod.html
 README
 README.md
 script/plex
-t/Template-Lexical.t
 t/Template-Plex.t
