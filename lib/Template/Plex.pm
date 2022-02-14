@@ -8,10 +8,10 @@ use version; our $VERSION = version->declare('v0.1.0');
 use feature ":all";#qw<say state refaliasing>;
 no warnings "experimental";
 
-use File::Basename qw<dirname basename>;
+#use File::Basename qw<dirname basename>;
 use File::Spec::Functions qw<catfile>;
 use Exporter 'import';
-use Data::Dumper;
+#use Data::Dumper;
 
 
 our %EXPORT_TAGS = ( 'all' => [ qw( plex) ] );
@@ -45,7 +45,7 @@ sub lexical{
 }
 
 sub  bootstrap{
-	say "BOOTSTRAP OPTIONS: ", Dumper @_;
+	#say "BOOTSTRAP OPTIONS: ", Dumper @_;
 	my $self=shift;
 	\my $_data_=\shift;
 	my $href=shift;
@@ -56,7 +56,7 @@ sub  bootstrap{
 	#say "FIELDS are: ",%fields;
 	#my %opts=@_;
 
-my $out="{";
+my $out="package $opts{package} {";
 
 $out.= '	\my %fields=$href;
 ';
@@ -79,7 +79,7 @@ $out.='
 	}
 
 $out.='
-		my $ref=eval bootstrap (@_);
+		my $ref=eval Template::Plex::bootstrap (@_);
 		#say "REF IN PREPARE SUB: ", Dumper $ref;
 		if($@ and !$ref){
 			print  $@;
@@ -87,7 +87,7 @@ $out.='
 		}
 		#say "EXECUTING: ", $ref->();
 		#say $ref;
-		$self->[sub_]=$ref;
+		$self->[Template::Plex::sub_]=$ref;
 		$self;
 	};
 
@@ -95,11 +95,11 @@ $out.='
 				#into current lexical scope
 $out.='
 
-	sub plex{
+	my sub plex{
 		unshift @_, $prepare;	#Sub templates now access lexical plex sub routine
 					#with access to its scoped $prepare sub and variables
 		say "IN LEXICAL PLEX";
-		__PACKAGE__->new(@_)
+		Template::Plex->new(@_)
 	}
 
 ';
@@ -107,7 +107,7 @@ $out.='
 sub {
 	no warnings \'uninitialized\';
 	no strict;
-	say "Template is: ",Dumper @_;
+	#say "Template is: ",Dumper @_;
 	my $self=shift;
 	\\my %fields=shift//\\%fields;
 ';
@@ -117,9 +117,9 @@ $out.='
 	qq{'.$_data_.'};
 
 }
-}';
+};';
 my $line=0;
-say map { $line++ . $_."\n"; } split "\n", $out;
+#say map { $line++ . $_."\n"; } split "\n", $out;
 $out;
 };
 
@@ -128,21 +128,15 @@ $out;
 # returns a code reference which when called renders the template with the values
 sub _prepare_template{
 	my ($self, undef,$href,%opts)=@_;
-        #######################
-        # my $self=$_[0];     #
-        # #my $_data_=\$_[1]; #
-        # my $href=$_[2];     #
-        #######################
-
 	$href//={};
 	\my %fields=$href;
 
-	my $ref=eval &bootstrap;
+	my $ref=eval &Template::Plex::bootstrap;
 	if($@ and !$ref){
 		print  "EVAL: ",$@;
 		print  "EVAL: ",$!;
 	}
-	$self->[sub_]=$ref;
+	$self->[Template::Plex::sub_]=$ref;
 	$self;
 }
 
@@ -181,7 +175,6 @@ sub _munge {
 
 sub _subst_inject {
 	\my $buffer=\(shift);
-	#my $root=$_[1];
 	while($buffer=~s|$Include|_munge($1, @_)|e){
 		#TODO: Possible point for diagnostics?
 	};
@@ -190,7 +183,7 @@ my $prepare=\&_prepare_template;
 
 sub plex{
 	unshift @_, $prepare;	#push current top level scope
-	__PACKAGE__->new(@_)
+	Template::Plex->new(@_)
 }
 
 
@@ -237,8 +230,10 @@ sub new{
 	if($args){
 		#Only call this from top level call
 		#Returns the render sub
+
+		state $package=0;
+		$options{package}//="Template::Plex::temp".$package++;#force a unique package if non specified
 		$prepare->($self, $data, $args,%options);	#Prepare in the correct scope
-		#$self->_prepare_template($data, $args, %options);
 	}
 	else {
 		$data;
