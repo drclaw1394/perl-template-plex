@@ -8,9 +8,6 @@ WriteMakefile(
 	ABSTRACT_FROM		=> 'lib/Template/Plex.pod', # retrieve abstract from module
 	AUTHOR			=> 'Ruben Westerberg <drclaw@mac.com>',
 	LICENSE			=> 'mit',
-	EXE_FILES		=> [
-					'script/plex'
-				],
 
 	MIN_PERL_VERSION	=> '5.24.0',		#for ref aliasing
 	TEST_REQUIRES		=> { "Test::More" => 0},
