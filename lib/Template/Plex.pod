@@ -7,31 +7,35 @@ Template::Plex - Templates in (P)erl using (Lex)ical Aliasing
 	use Template::Plex;
 
 	#Data for templates alias and access
-	my $base_data={name=>"James", age=>"12", fruit=>"banana"};
+	my $base_data={
+		name=>"James",
+		age=>"12",
+		fruit=>"banana"
+	};
 
-	#Options  alter template runtime
-	my %options = (
-		root=>"path/to/templates/dir"
-		no_include=>undef
-	);
 
 	#The actual template text
+	#
 	my $inline_template='$name\'s age $age and favourite fruit is $fruit'
 
 	#Preparing the template in Template::Plex object
+	#
 	my $t=plex [$inline_template], $base_data, %options;
 
 
 	#Render with the values aliased in $base_data
-	$t->render();		
+	$t->render;
 	#
 	#=> 	James's age is 12 and favourite fruit is banana
 
 	#Update the data in the hash used during preparation.
+	#
 	$base_data->{qw<name,fruit>}=qw<John apple>;
 
+
 	#Rendering again will use updated aliased values
-	$t->render();		
+	#
+	$t->render;
 	#
 	#=>	John's age is 12 and favourite fruit is apple
 
@@ -41,8 +45,8 @@ Template::Plex - Templates in (P)erl using (Lex)ical Aliasing
 This module is a mechanism to facilitate the use of perl (not embedded perl) as
 a text processing template language. 
 
-Conceptually, a Plex template is just string returned from a subroutine in
-perl's double quoted context, with the outer operators removed:
+Conceptually, a C<Template::Plex> template is just a string returned from a
+subroutine in perl's double quoted context, with the outer operators removed:
 	
 	#PERL
 	"This is is a perl string interpolating @{[ map uc, qw<a b c d>]}"
@@ -60,15 +64,12 @@ perl's double quoted context, with the outer operators removed:
 
 
 Because of the powerful and flexible interpolation of strings in perl, you can
-do just about anything in the templates. After all the template is just perl. 
+do just about anything in a Plex template. After all the template is just perl. 
 
 The 'lexical' part of this modules refers to ability of variables to be
-aliased into the template (more on this below). It improves the style and use
-of variables in the template while allowing sub templates to access/override
-variables in a lexical fashion. 
-
-It also allows an external system to operate on its own variables, without
-knowledge of the template mechanism API.
+aliased into the template (more on this below). It improves the style and usage
+of variables in a template while also allowing sub templates to access/override
+variables using lexical scoping.
 
 Some feature highlights:
 
@@ -76,7 +77,7 @@ Some feature highlights:
 
 =item * Templates are written in perl syntax
 
-=item * Template is compiled into a subroutine
+=item * Templates are compiled into a perl subroutine
 
 =item * Lexical and package variables and sub routines with templates 
 
@@ -96,24 +97,23 @@ Some feature highlights:
 
 =item *
 
-So many templating systems available, none use perl as the template language?
+So many templating systems available, yet none use perl as the template language?
 
 =item * 
 
 Lexical aliasing allows the input variables to be accessed directly by name
 (i.e. C<$name>) instead of as a member of a hash ref (i.e.
-C<$fields-E<gt>{name}>) or by delimiting with custom syntax C<E<gt>%= name E<lt>%>
+C<$fields-E<gt>{name}>) or by delimiting with custom syntax C<E<lt>%= name E<gt>%>
 
 =item * 
 
 The perl syntax C<@{[...]}>  will execute arbitrary perl statements in a double
-quoted string. That's the hardest part of a template system and perl does it
-for us
+quoted string. 
 
 =item * 
 
-Other templating system are very powerful, but have huge a huge APIs. Plex
-leverages perl to have a more concise API.
+Other templating system are very powerful, but have huge a huge APIs and
+options. Plex leverages perl to have a more concise API.
 
 =back
 
@@ -203,7 +203,8 @@ package name is created to prevent name collisions
 
 =item Return value
 
-The return value is C<Template::Plex> object which can be rendered using the C<render> method
+The return value is C<Template::Plex> object which can be rendered using the
+C<render> method
 
 =item Example Usage
 		my $hash={
@@ -261,7 +262,7 @@ syntax error
 
 =head1 PLEX TEMPLATE SYNTAX \w EXAMPLES
 
-Well, its just perl. Seriously. But if you aren't grasping the concept just
+Well, its just perl. Seriously. But if you haven't grasped the concept just
 yet, a L<Template::Plex> template is a perl program with the two following
 constraints:
 
