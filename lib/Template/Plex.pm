@@ -5,7 +5,7 @@ use warnings;
 use Symbol qw<delete_package>;
 use Carp qw<carp croak>;
 use version; our $VERSION = version->declare('v0.1.0');
-use feature qw<say state refaliasing>;
+use feature qw<say state refaliasing lexical_subs>;
 no warnings "experimental";
 
 #use File::Basename qw<dirname basename>;
@@ -132,8 +132,8 @@ sub _prepare_template{
 
 	my $ref=eval &Template::Plex::bootstrap;
 	if($@ and !$ref){
-		print  "EVAL: ",$@;
-		print  "EVAL: ",$!;
+		print  STDERR "EVAL: ",$@;
+		print  STDERR "EVAL: ",$!;
 	}
 	$self->[Template::Plex::sub_]=$ref;
 	$self;

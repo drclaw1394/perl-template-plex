@@ -8,7 +8,6 @@ examples/html.pl
 examples/html.plex
 examples/recursive-2.plex
 examples/recursive-3.plex
-examples/recursive-top.pl
 examples/recursive-top.plex
 examples/recursive.pl
 lib/Template/Plex.pm
@@ -18,5 +17,6 @@ MANIFEST			This list of files
 MANIFEST.SKIP
 README
 README.md
-script/plex
+t/sub1.plex
+t/sub2.plex
 t/Template-Plex.t
