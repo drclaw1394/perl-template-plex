@@ -133,9 +133,21 @@ hardwork
 
 =back
 
+=head1 TODO
 
+=over 
 
+=item * More tests
 
+=item * Add a guide document
+
+=item * Make examples of recursion, lexical scoping, etc...
+
+=item * CLI app to render .plex files
+
+=item * Fix any bugs
+
+=back
 
 =head1 API
 
@@ -155,9 +167,9 @@ calling the C<render> method on it.
 B<Single  Argument Version>
 
 If only the first argument is supplied, the template is loaded, prepared, and
-rendered immediately. The rendered text is returned.  This is useful is using
-sub templates, as the variables and options are already available from the
-top level template.
+rendered immediately. The rendered text is returned.  This is useful when using
+sub templates, as the variables and options are already available from the top
+level template.
 
 
 The arguments are detailed below:
@@ -395,15 +407,8 @@ C<my> variables will only be visible within the C<@{[..]}> block it was defined.
 			"Time is: $a";	
 		} }]
 
-	eg	#Recursively load and render a template with my variables
-		@{[ do {
-			my $hash={carrots=>20};
-			my $t=plex "sub/template.plex" ,$hash;
-			$t->render;
-		}]}
-
 C<our> variables can be used instead of C<my> variables and are visible
-throughout template:
+throughout the current template, including recursively used templates
 
 	eg
 		@{[ do {
