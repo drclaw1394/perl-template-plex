@@ -5,7 +5,7 @@ use warnings;
 use Symbol qw<delete_package>;
 use Carp qw<carp croak>;
 use version; our $VERSION = version->declare('v0.1.0');
-use feature ":all";#qw<say state refaliasing>;
+use feature qw<say state refaliasing>;
 no warnings "experimental";
 
 #use File::Basename qw<dirname basename>;
@@ -37,7 +37,6 @@ sub lexical{
 	\my %fields=$href;
 
 	my $string="";
-	#say "Fields: ", %fields;
 	for my $k (keys %fields){
 		$string.= "\\my \$$k=\\\$fields{$k};\n";
 	}
@@ -45,7 +44,6 @@ sub lexical{
 }
 
 sub  bootstrap{
-	#say "BOOTSTRAP OPTIONS: ", Dumper @_;
 	my $self=shift;
 	\my $_data_=\shift;
 	my $href=shift;
@@ -53,23 +51,22 @@ sub  bootstrap{
 
 	$href//={};
 	\my %fields=$href;
-	#say "FIELDS are: ",%fields;
-	#my %opts=@_;
 
 my $out="package $opts{package} {";
 
 $out.= '	\my %fields=$href;
 ';
-$out.='		my %options=%opts;
-';
+$out.='		my %options=%opts; 
+' if keys %opts;
+
 $out.=lexical($href);		#add aliased variables	from hash
 $out.='
 	my $prepare=sub {
-	say "IN PREPARE IN SUB";
-		my $self=$_[0];
+		my ($self,undef, $href,%opts)=@_;
+		#$_[0];
 		#my $_data_=\$_[1];
-		my $href=$_[2];
-
+		#my $href=$_[2];
+		#my %opts=@_;
 		$href//={};
 		\my %fields=$href;
 		';
@@ -80,13 +77,10 @@ $out.='
 
 $out.='
 		my $ref=eval Template::Plex::bootstrap (@_);
-		#say "REF IN PREPARE SUB: ", Dumper $ref;
 		if($@ and !$ref){
 			print  $@;
 			print  $!;
 		}
-		#say "EXECUTING: ", $ref->();
-		#say $ref;
 		$self->[Template::Plex::sub_]=$ref;
 		$self;
 	};
@@ -96,10 +90,16 @@ $out.='
 $out.='
 
 	my sub plex{
-		unshift @_, $prepare;	#Sub templates now access lexical plex sub routine
+		my ($path, $vars, %opts)=@_;
+		
+		#unshift @_, $prepare;	#Sub templates now access lexical plex sub routine
 					#with access to its scoped $prepare sub and variables
-		say "IN LEXICAL PLEX";
-		Template::Plex->new(@_)
+		my $template=Template::Plex->new($prepare,$path,$vars,%opts?%opts:%options);
+		@_==1
+			?  $template->render
+			: $template;
+
+
 	}
 
 ';
@@ -107,7 +107,6 @@ $out.='
 sub {
 	no warnings \'uninitialized\';
 	no strict;
-	#say "Template is: ",Dumper @_;
 	my $self=shift;
 	\\my %fields=shift//\\%fields;
 ';
@@ -182,8 +181,12 @@ sub _subst_inject {
 my $prepare=\&_prepare_template;
 
 sub plex{
-	unshift @_, $prepare;	#push current top level scope
-	Template::Plex->new(@_)
+	my ($path,$vars,%opts)=@_;
+	#unshift @_, $prepare;	#push current top level scope
+	my $template=Template::Plex->new($prepare,$path,$vars,%opts);
+	@_==1
+		?  $template->render
+		: $template;
 }
 
 
@@ -192,9 +195,9 @@ sub new{
 	my $self=bless [], shift;
 	my ($prepare, $path, $args, %options)=@_;
 	my $root=$options{root};
-	croak "plex: even number of arguments required" if (@_-1)%2;
+	#croak "plex: even number of arguments required" if (@_-1)%2;
 	croak "plex: first argument must be defined" unless defined $path;
-	croak "plex: at least 2 arguments needed" if ((@_-1) < 2);
+	#croak "plex: at least 2 arguments needed" if ((@_-1) < 2);
 
 	my $data=do {
 		local $/=undef;
@@ -225,6 +228,7 @@ sub new{
 
 	$args//={};		#set to empty hash if not defined
 	
+	chomp $data;
 	#Perform inject substitution
 	_subst_inject($data, root=>$root) unless $options{no_include};
 	if($args){

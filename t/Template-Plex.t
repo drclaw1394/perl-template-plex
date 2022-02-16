@@ -3,7 +3,7 @@ use warnings;
 
 use Data::Dumper;
 $Data::Dumper::Deparse=1;
-use Test::More tests => 6;
+use Test::More tests => 8;
 BEGIN { use_ok('Template::Plex') };
 use Template::Plex;
 my $default_data={data=>[1,2,3,4]};
@@ -15,11 +15,6 @@ my $template=q|@{[
 		for my $d ($fields{data}->@*) {
 			$s.="row $d\n"
 		}
-		#say "Lexical Plex: ",Dumper \&plex;
-		#say "DOING SUB PLEX ", my $t=plex([$sub], {});
-		#say $t->sub;
-		#say $t->sub->();
-		#$s.$t->sub()->();
 		$s;
 
 
@@ -29,7 +24,6 @@ my $template=q|@{[
 
 $template=plex [$template], $default_data;
 my $result=$template->render();
-print "RESULT: $result";
 my $expected="";
 for(1,2,3,4){
 	$expected.="row $_\n";
@@ -87,9 +81,24 @@ $override_data={name=>"Jill"};
 $template=plex [$template], $default_data;
 $result=$template->render($override_data);
 $expected="";
-ok $result eq "my name is John not Jill", "Lexical and override access"
+ok $result eq "my name is John not Jill", "Lexical and override access";
 
 
 
 
-#TODO: Recursive access testing
+{
+	my $top_level='top level template recursively using another:@{[plex "sub1.plex"]}';
+
+	my $t=plex [$top_level], {}, root=> "t";
+	my $text=$t->render;
+	my($first,$last)=split ":", $text;
+	ok $last eq 'Sub template 1', "Recursive plex";
+}
+{
+	my $top_level='top level template recursively using another:@{[plex "sub2.plex"]}';
+	my %vars=(value=>10);
+	my $t=plex [$top_level], \%vars, root=> "t";
+	my $text=$t->render;
+	my($first,$last)=split ":", $text;
+	ok $last eq 'Sub template 2 10', "Recursive plex, top aliased";
+}
