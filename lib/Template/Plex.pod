@@ -129,7 +129,7 @@ quoted string.
 
 Other templating system are very powerful, but have huge a huge APIs and
 options. L<Template::Plex> could have a very minimal API with perl doing the
-hardwork
+hard work
 
 =back
 
@@ -479,7 +479,7 @@ value you want returned into the template).
 =item * Last newline of templates are chomped
 
 Most text editors insert a newline as the last character in a file.  A chomp is
-peformed before the template is prepared to avoid extra newlines in the output
+performed before the template is prepared to avoid extra newlines in the output
 when using sub templates. If you really need that newline, place an empty line
 at the end of your template
 
