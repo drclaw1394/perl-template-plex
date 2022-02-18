@@ -1,0 +1,11 @@
+This is recursive template 2 with $title
+Looking for $aaa
+Package in rec 2 @{[__PACKAGE__]}
+@{[
+do{
+	our $john="cool";
+	#Note this is an immediate render
+	plex "recursive-3.plex";
+}
+]}
+
