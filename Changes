@@ -1,5 +1,11 @@
 Revision history for Perl extension Template::Plex.
 
+0.2.0  Tue 29 Mar 2022 09:01:43 AEST
+	- Cleanup generated code a little
+	- Added plx and block subroutines
+	- Added block_fix feature
+	- Updated documentaion
+
 0.1.1  Fri 18 Feb 2022 18:03:48 AEST
 	- Fixed examples in example directory
 	- Fixed Changes (wrong package name)

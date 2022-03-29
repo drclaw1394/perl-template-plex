@@ -158,33 +158,16 @@ hard work
 Creates a new instance of a template, loaded from a scalar, file path or an
 existing file handle. 
 
-B<Multi Argument Version>
-
-If 2 or more arguments are provided, the template is
-loaded and prepared and returned. The returned template can be rendered by
-calling the C<render> method on it.
-
-B<Single  Argument Version>
-
-If only the first argument is supplied, the template is loaded, prepared, and
-rendered immediately. The rendered text is returned.  This is useful when using
-sub templates, as the variables and options are already available from the top
-level template.
-
-
-The arguments are detailed below:
-
 =over 
 
 =item C<$path>
 
 This is a required argument.
 
-If C<$path> is a string, it is treated as a file
-path to a template file. The file is opened and slurped with the content being
-used as the template
+If C<$path> is a string, it is treated as a file path to a template file. The
+file is opened and slurped with the content being used as the template.
 
-If C<$path> is filehandle, or GLOB ref, it is slurped with the content being
+If C<$path> is a filehandle, or GLOB ref, it is slurped with the content being
 used as the template. Can be used to read template stored in C<__DATA__> for
 example
 
@@ -201,7 +184,7 @@ C<undef>.
 The top level items of the C<$variables_hash> hash are aliased into the
 template using the key name (key names must be valid for a variable name for
 this to operate). This allows an element such as C<$fields{name>}> to be
-directly accessible as C<$name>.
+directly accessible as C<$name> in the template and sub templates.
 
 It also means any external modification of the items in C<$variable_hash> will
 be visible in the template.
@@ -212,14 +195,16 @@ C<$fields{name}>
 
 If the C<$variables_hash> is an empty hash ref C<{}> or C<undef> then no
 variables will be lexically aliased. The only variables accessible to the
-template will be via the C<render> method call
+template will be via the C<render> method call.
 
-=item C<Options>
+=item C<%options>
 
 These are non required arguments, but must be key value pairs when used.
 
-Options are stored lexically in the rendering sub in the variable C<%options>
-for recursive C<plex> calls within a template.
+Options are stored lexically for access in the template in the variable
+C<%options>. This variable is automatically used as the options argument in
+recursive calls to C<plex>, if no options are provided
+
 
 Currently supported options are:
 
@@ -240,6 +225,35 @@ See C<include> for more details
 
 This doesn't impact recursive calls to C<plex> when dynamically/conditionally
 loading templates.
+
+=item B<no_block_fix>
+
+Disables removing of EOL after a C<@{[]}> when  the closing C<}]> starts on a
+new line. Does not effect C<@{[]}> on single line or embedded with other text
+
+	eg	
+		
+		Line 1
+		@{[
+			""
+		]}		<-- this NL removed by default
+		Line 3	
+	
+In the above example, the default behaviour is to remove the newline after the
+closing C<]}> when it is on a separate line. The rendered output would be:
+
+
+		Line1
+		Line3
+
+If block fix was disabled (i.e. C<no_block_fix> was true) the output would be:
+
+
+		Line1
+
+		Line3
+
+
 
 =item B<package>
 
@@ -266,6 +280,20 @@ C<render> method
 
 =back
 
+=head2 C<plx>
+
+	plex $path, $variables_hash, %options
+
+Similar to the C<plex> sub, however loads and immediately execute the template.
+Equivalent to:
+
+	my $tempalte=plex ...;
+	$tempalte->render;
+
+Arguments are the same as C<plex>.
+
+Useful for one off rendering of a template.  If 
+
 =head2 C<render>
 
 	$obj->render($fields);
@@ -284,7 +312,7 @@ C<%fields> which is directly accessible in the template
 		#Template:
 		My name is $fields{John}
 
-Note that the lexically aliased variables in C<plex> are independent to the
+Note that the lexically aliased variables setup in C<plex> are independent to the
 C<%fields> variable and can both be used simultaneously in a template
 
 =head2 C<include>
@@ -295,9 +323,10 @@ C<%fields> variable and can both be used simultaneously in a template
 
 Used in templates only.
 
-This is a special directive that substitutes the text B<@{[include("path")]}>
-with the contents of the file pointed to by path. This is a preprocessing step
-which happens before the template is prepared for execution
+This is a special directive that substitutes the text similar to
+B<@{[include("path")]}> with the contents of the file pointed to by path. This
+is a preprocessing step which happens before the template is prepared for
+execution
 
 
 This API is only available in templates. If C<root> was included in the options
@@ -307,6 +336,43 @@ When a template is loaded by C<plex> the processing of this is
 subject to the C<no_include> option. If C<no_include> is specified, any
 template text that contains the C<@{[include("path")}]> text will result in a
 syntax error
+
+=head2 block
+
+	block { ... }
+
+A subroutine which executes a block just like the built in  C<do>. However it
+always returns an empty array ref (C<[]>).
+
+When used in a template in the C<@{[]}> construct, arbitrary statements can be
+executed, however, the empty array returned, it won't inject unwanted 'last
+statement' values into your template.
+
+If you want the last statement returned into the template, use the built in
+C<do>.
+
+	eg
+		
+		@{[
+			# This will define a package variable for use later in the template
+			# but WILL NOT inject the value 1 into template when rendered
+			block{
+				$i=1;
+			}
+
+		]}
+
+
+		@{[
+			# This will dfine a package variable for use later in the tamplate
+			# AND immediately inject '1' into the template when rendered
+			do {
+				$i=1
+			}
+
+		]}
+
+
 
 =head1 PLEX TEMPLATE SYNTAX \w EXAMPLES
 
