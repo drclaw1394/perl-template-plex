@@ -29,6 +29,7 @@ use constant KEY_OFFSET=>0;
 use enum  ("package_=".KEY_OFFSET, qw<sub_>);
 use constant KEY_COUNT=>sub_-package_+1;
 
+
 sub new;	#forward declare new;
 
 sub lexical{
@@ -84,10 +85,12 @@ $out.='
 		$self;
 	};
 
+	my %cache;	#Stores code refs using caller as keys
 
 	#lexical plex changes the prepare and also reuses options with out making it explicit
         my sub plex{
                 my ($path, $vars, %opts)=@_;
+
 
                 #unshift @_, $prepare;  #Sub templates now access lexical plex sub routine
                                         #with access to its scoped $prepare sub and variables
@@ -98,9 +101,15 @@ $out.='
         }
 	my sub plx {
 		my ($path,$vars,%opts)=@_;
-		my $template=Template::Plex->new($prepare,$path,$vars,%opts?%opts:%options);
+
+		my $id=join "", caller;
+		$cache{$id} and return $cache{$id}->render;
+		
+		my $template=&plex;
+		#Template::Plex->new($prepare,$path,$vars,%opts?%opts:%options);
 		#TODO: check for errors
 		
+		$cache{$id}//=$template;
 		$template->render;
 	}
 
@@ -192,12 +201,17 @@ sub plex{
 	$template;
 }
 
+my %cache; #toplevel cache
 #Load template and render in one call. Easy for on offs
 sub plx {
 	my ($path,$vars,%opts)=@_;
+	my $id=join "", caller;
+	$cache{$id} and "exisiting !" and return $cache{$id}->render;
 	my $template=&plex;
+
 	#TODO: check for errors
 	
+	$cache{$id}//=$template;
 	$template->render;
 }
 

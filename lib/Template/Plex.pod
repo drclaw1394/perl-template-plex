@@ -4,46 +4,50 @@ Template::Plex - Templates in (P)erl using (Lex)ical Aliasing
 
 =head1 SYNOPSIS
 
+Import C<plex> and C<plx> into you package:
+
 	use Template::Plex;
 
-	#Data for templates to alias and access
-	my $base_data={
-		name=>"James",
-		age=>"12",
-		fruit=>"banana"
+Setup variables/data you want to alias:
+
+	my $vars={
+		size=>"large",
+		slices=>8,
+		people=>[qw<Kim Sam Harry Sally>
+		]
 	};
+	local $"=", ";
 
+Write a template:
 
-	#The actual template text
-	#
-	my $inline_template='$name\'s age $age and favourite fruit is $fruit'
+	Ordered a $size pizza with $slices slices to share between @$people and myself.
+	That averages @{[$slices/(@$people+1)]} slices each.
 
-	#Preparing the template in Template::Plex object
-	#
-	my $t=plex [$inline_template], $base_data, %options;
+Load a template with C<plex>:
 
+	my $template= plex "path_to_template", \%vars;
 
-	#Render with the values aliased in $base_data
-	$t->render;
-	#
-	#=> 	James's age is 12 and favourite fruit is banana
+Render it:
+	my $output=$template->render;	
 
-	#Update the data in the hash used during preparation.
-	#
-	$base_data->{qw<name,fruit>}=qw<John apple>;
+	#OUTPUT
+	Ordered a large pizza with 8 slices to share between Kim, Sam, Harry, Sally and myself.
+	That averages 1.6 slices each.     
+	
 
+Change values and render it again:
 
-	#Rendering again will use updated aliased values
-	#
-	$t->render;
-	#
-	#=>	John's age is 12 and favourite fruit is apple
+	$vars->{size}="extra large";
+	$vars->{slices}=12;
+	
+	$output=$template->render;
+
+	#OUTPUT
+	Ordered a extra large pizza with 12 slices to share between Kim, Sam, Harry, Sally and myself.
+	That averages 2.4 slices each.
 
 
 =head1 DESCRIPTION
-
-This module is a mechanism to facilitate the use of perl (not embedded perl) as
-a text processing template language. 
 
 Conceptually, a C<Template::Plex> template is just a string returned from a
 subroutine in perl's double quoted context, with the outer operators removed:
@@ -62,6 +66,81 @@ subroutine in perl's double quoted context, with the outer operators removed:
 	#OUTPUT is the same for all of the above:
 	This is is a perl string interpolating A B C D
 
+Working from this knowledge, this module facilitates the use of perl (not
+embedded perl) as a text processing template language and system capable of
+loading, caching and rendering powerful templates. The following are actual
+templates demonstrating some of the feature:
+
+=over
+
+=item * Templates are written in perl syntax:
+
+	This template is a valid $perl  code @{[ uc "minus" ]} the outer quotes
+
+=item * Templates are compiled into a perl subroutine, optionally cached
+
+	Sub/template is loaded only the first time in this map/loop
+	subsequent calls to plx use the cached template
+
+	@{[map {plx "path_to_template",{}} qw< a b c d e >]}
+		
+
+=item * Lexical and package variables accessed/created within templates
+
+	@{[
+		block {
+			$input_var//=1; #set default
+
+		}
+
+	}]
+	
+	Value is $input_var;
+
+=item * Call and create subroutines within templates:
+
+	@{[
+		block {
+			sub my_great_calc {
+				my $input=shift;
+				$input*2/5;
+			}
+		}
+
+	}]
+
+	Result of calculation: @{[my_great_calc(12)]}
+
+=item * 'Include' Templates within templates easily:
+	
+	@{[include("path_to_file")]}
+
+=item * Recursive sub template loading
+	
+	@{[ plx "path_to_sub_template" ]}
+
+=item * Conditional rendering
+
+	@{[ $flag and $var]}
+
+	@{[ $flag?$var:""]}
+
+=item * Lists/Loops/maps
+	
+	template interpolates @$lists directly
+	
+
+=item * C<use> other modules directly in templates:
+
+	@{[
+		block {
+			use Time::HiRes qw<time>
+		}
+	]}
+
+	Time of day right now: @{[time]}
+
+=back
 
 Because of the powerful and flexible interpolation of strings in perl, you can
 do just about anything in a Plex template. After all the template is just perl. 
@@ -73,40 +152,10 @@ variables using lexical scoping.
 
 Some feature highlights:
 
-=over
 
-=item * Templates are written in perl syntax
-
-=item * Templates are compiled into a perl subroutine
-
-=item * Lexical and package variables accessed/created within templates
-
-=item * Call and create subroutines within templates
-
-=item * 'Include' Templates within templates easily
-
-=item * Recursive and conditional sub template loading
-
-=item * Declare variables and subroutines in templates
-
-=item * C<use> other modules directly in templates
-
-=back
-
-To get started after installation, copy the following lines into perl and execute:
-
-	use strict;
-	use warnings;
-	use feature "say";
-	use Template::Plex;
-	my %vars=(name=>"Susan", age=>99);
-	my $template=plex ['this is ${name}\'s inline template. $age young'], \%vars;
-	say $template->render;
-	
-	@vars{qw<name age>}=qw<Richard 23>;
-	say $template->render;
-
-For more examples, checkout the examples directory in this distribution.
+The synopsis example is only scratching the surface in terms of features. For
+more examples, checkout the examples directory in this distribution. I hope to
+add more in the future
 
 =head1 MOTIATION
 
@@ -144,8 +193,6 @@ hard work
 =item * Add a guide document
 
 =item * CLI app to render .plex files
-
-=item * Fix any bugs
 
 =back
 
@@ -186,8 +233,9 @@ template using the key name (key names must be valid for a variable name for
 this to operate). This allows an element such as C<$fields{name>}> to be
 directly accessible as C<$name> in the template and sub templates.
 
-It also means any external modification of the items in C<$variable_hash> will
-be visible in the template.
+External modification of the items in C<$variable_hash> will be visible in the
+template. This is thee primary mechanism change inputs for subsequent renders
+of the template.
 
 In addition, the C<$variables_hash> itself is aliased to C<%fields> variable
 (note the %) and directly usable in the template like a normal hash e.g.
@@ -203,7 +251,7 @@ These are non required arguments, but must be key value pairs when used.
 
 Options are stored lexically for access in the template in the variable
 C<%options>. This variable is automatically used as the options argument in
-recursive calls to C<plex>, if no options are provided
+recursive calls to C<plex> or C<plx>, if no options are provided
 
 
 Currently supported options are:
@@ -223,13 +271,13 @@ Disables the uses of the preprocessor include feature. The template text will
 not be scanned  and will prevent the C<include> feature from operating.
 See C<include> for more details
 
-This doesn't impact recursive calls to C<plex> when dynamically/conditionally
+This doesn't impact recursive calls to C<plex> or C<plx> when dynamically/conditionally
 loading templates.
 
 =item B<no_block_fix>
 
 Disables removing of EOL after a C<@{[]}> when  the closing C<}]> starts on a
-new line. Does not effect C<@{[]}> on single line or embedded with other text
+new line. Does not effect C<@{[]}> on a single line or embedded with other text
 
 	eg	
 		
@@ -284,15 +332,21 @@ C<render> method
 
 	plex $path, $variables_hash, %options
 
-Similar to the C<plex> sub, however loads and immediately execute the template.
-Equivalent to:
+Arguments are the same as C<plex>.  Similar to the C<plex> subroutine, however
+it loads, caches and immediately executes the template.  Somewhat equivalent
+to:
 
-	my $tempalte=plex ...;
-	$tempalte->render;
+	state $template=plex ...;
+	$template->render;
 
-Arguments are the same as C<plex>.
+The template is cached so that next time C<plx> is called from the same
+file/line, it reuses the code.
 
-Useful for one off rendering of a template.  If 
+Makes using recursive templates very easy, however does have the slight
+overhead of generating cache keys and actually performing the cache lookup
+
+
+
 
 =head2 C<render>
 
@@ -312,7 +366,7 @@ C<%fields> which is directly accessible in the template
 		#Template:
 		My name is $fields{John}
 
-Note that the lexically aliased variables setup in C<plex> are independent to the
+Note that the lexically aliased variables setup in C<plex> or C<plx> are independent to the
 C<%fields> variable and can both be used simultaneously in a template
 
 =head2 C<include>
@@ -345,16 +399,16 @@ A subroutine which executes a block just like the built in  C<do>. However it
 always returns an empty array ref (C<[]>).
 
 When used in a template in the C<@{[]}> construct, arbitrary statements can be
-executed, however, the empty array returned, it won't inject unwanted 'last
-statement' values into your template.
+executed. However, as a reference to an empty array is returned, perl's
+interpolation won't inject 'last statement' values into your template.
 
-If you want the last statement returned into the template, use the built in
+If you DO want the last statement returned into the template, use the built in
 C<do>.
 
 	eg
 		
 		@{[
-			# This will define a package variable for use later in the template
+			# This will assign a variable for use later in the template
 			# but WILL NOT inject the value 1 into template when rendered
 			block{
 				$i=1;
@@ -364,7 +418,7 @@ C<do>.
 
 
 		@{[
-			# This will dfine a package variable for use later in the tamplate
+			# This will assign a variable for use later in the tamplate
 			# AND immediately inject '1' into the template when rendered
 			do {
 				$i=1
@@ -396,8 +450,8 @@ file or in the C<__DATA__ > section:
 	@{[ map ucfirst."\n", @$colors ]}
 	Good day!
 
-Everything in the text is valid syntax in double quote operator, but the outer
-double quote operator is omitted.
+Everything in the text is valid syntax withing double quote operators, but the outer
+double quote markers are omitted.
 
 Or in other words, the template looks like plain text, but with double quoted
 added, it is valid perl code.
@@ -432,13 +486,14 @@ braces and lets you do some powerful things:
 	Doing math a + b = @{[ $a+$b ]}
 	Building an array @{[ uc("red"),uc("blue")]}
 	Mapping @{[ join "\n", map uc, @items]}
+	Conditional interpolation @{[ $var and "insert on true"]}
 	
 
 =head2 Executing Multiple Statements
 
-When a single statement won't do, the C<do{}> construct executes a block, which
-can have any number of statements and returns the last statement executed into
-the template
+When a single statement won't do, the C<do{}>  or C<block> construct executes a
+block, which can have any number of statements; C<do> returns the last
+statement into the template where as block does not
 
 	Executing multiple statments @{[ do {
 	 	my $a=1; 
@@ -449,11 +504,12 @@ the template
 
 =head2 Using/Requiring Modules
 
-Again standard perl syntax for the win
+Again standard perl syntax for the win. C<BEGIN> block is executed as early as
+possible, before the rest of the template executes
 
 	Template will call hi res time 
 	The time is: @{[ time ]}
-	@{[ do {
+	@{[ block {
 		BEGIN {
 			use Time::HiRes qw<time>;
 		}
@@ -462,7 +518,7 @@ Again standard perl syntax for the win
 
 =head2 Declaring Variables
 
-Variables can be declared in the C<@{[..}]> container. 
+Variables can be declared in the C<@{[..}]> container.
 
 C<my> variables will only be visible within the C<@{[..]}> block it was defined.
 	
@@ -493,6 +549,7 @@ throughout the current template, including recursively used templates
 Sub templates loaded with C<include> and recursive C<plex> calls will have
 direct access to package variables created in the template. A new unique
 package is created for each top level use of plex to prevent name collisions.
+
 
 =head1 TIPS ON USAGE
 
@@ -536,11 +593,10 @@ Example of single statements
 	@{[our ($a,$b,$c)=(7,8,9)]}	#declaring a
 
 If you are declaring a package variable, you might not want its value injected
-into the template at that point.  So instead you could use C<do{..}> execute
-multiple statements, with the last statement being an empty string (or the
-value you want returned into the template).
+into the template at that point.  So instead you could use C<block{..}> execute
+multiple statements and not inject the last statement:
 
-	@{[ do {our $temp=1;""} }];
+	@{[ block {our $temp=1;} }];
 
 =item * Last newline of templates are chomped
 
