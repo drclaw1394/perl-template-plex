@@ -631,6 +631,10 @@ Debugging templates could be much better
 Unless specifically constructed to write to file, templates are completely
 processed in memory.
 
+C<plx> caching will not be effective with literal templates unless they are stored in an anonymous array.
+	
+
+
 =head1 SEE ALSO
 
 Yet another template module right? 

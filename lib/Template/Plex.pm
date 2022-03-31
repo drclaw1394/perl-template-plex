@@ -293,7 +293,6 @@ sub jmap :prototype(&@){
 	my $sub=shift;	#block is first
 	my $data=pop;	#Data is last
 	my $delimiter=shift//"";	#delimiter is whats left
-	say "Data: ".$data;
 	join $delimiter, map &$sub, ($data//[])->@*;
 }
 
