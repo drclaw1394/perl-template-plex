@@ -117,3 +117,8 @@ ok $result eq "my name is John not Jill", "Lexical and override access";
 		ok $output =~ /$_/, "plx rendering ok";
 	}
 }
+
+
+{
+	
+}

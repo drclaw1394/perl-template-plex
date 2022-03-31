@@ -4,47 +4,61 @@ Template::Plex - Templates in (P)erl using (Lex)ical Aliasing
 
 # SYNOPSIS
 
+Import `plex` and `plx` into you package:
+
 ```perl
     use Template::Plex;
+```
 
-    #Data for templates to alias and access
-    my $base_data={
-            name=>"James",
-            age=>"12",
-            fruit=>"banana"
+Setup variables/data you want to alias:
+
+```perl
+    my $vars={
+            size=>"large",
+            slices=>8,
+            people=>[qw<Kim Sam Harry Sally>
+            ]
     };
+    local $"=", ";
+```
 
+Write a template:
 
-    #The actual template text
-    #
-    my $inline_template='$name\'s age $age and favourite fruit is $fruit'
+```perl
+    Ordered a $size pizza with $slices slices to share between @$people and myself.
+    That averages @{[$slices/(@$people+1)]} slices each.
+```
 
-    #Preparing the template in Template::Plex object
-    #
-    my $t=plex [$inline_template], $base_data, %options;
+Load a template with `plex`:
 
+```perl
+    my $template= plex "path_to_template", \%vars;
+```
 
-    #Render with the values aliased in $base_data
-    $t->render;
-    #
-    #=>     James's age is 12 and favourite fruit is banana
+Render it:
+	my $output=$template->render;	
 
-    #Update the data in the hash used during preparation.
-    #
-    $base_data->{qw<name,fruit>}=qw<John apple>;
+```perl
+    #OUTPUT
+    Ordered a large pizza with 8 slices to share between Kim, Sam, Harry,
+    Sally and myself.  That averages 1.6 slices each.     
+    
+```
 
+Change values and render it again:
 
-    #Rendering again will use updated aliased values
-    #
-    $t->render;
-    #
-    #=>     John's age is 12 and favourite fruit is apple
+```perl
+    $vars->{size}="extra large";
+    $vars->{slices}=12;
+    
+    $output=$template->render;
+
+    #OUTPUT
+    Ordered a extra large pizza with 12 slices to share between Kim, Sam,
+    Harry, Sally and myself.  That averages 2.4 slices each.
 ```
 
 # DESCRIPTION
-
-This module is a mechanism to facilitate the use of perl (not embedded perl) as
-a text processing template language. 
 
 Conceptually, a `Template::Plex` template is just a string returned from a
 subroutine in perl's double quoted context, with the outer operators removed:
@@ -65,6 +79,111 @@ subroutine in perl's double quoted context, with the outer operators removed:
     This is is a perl string interpolating A B C D
 ```
 
+Working from this knowledge, this module facilitates the use of perl (not
+embedded perl) as a text processing template language and system capable of
+loading, caching and rendering powerful templates. The following are snippets
+of templates demonstrating some of the feature:
+
+- Templates are written in perl syntax:
+
+    ```
+        This template is a valid $perl  code @{[ uc "minus" ]} the outer quotes
+    ```
+
+- Templates are compiled into a perl subroutine, optionally cached
+
+    ```perl
+        Sub/template is loaded only the first time in this map/loop
+        subsequent calls to plx use the cached template
+
+        @{[map {plx "path_to_template",{}} qw< a b c d e >]}
+                
+    ```
+
+- Lexical and package variables accessed/created within templates
+
+    ```
+        @{[
+                block {
+                        $input_var//=1; #set default
+                }
+
+        }]
+        
+        Value is $input_var;
+    ```
+
+- Call and create subroutines within templates:
+
+    ```perl
+        @{[
+                block {
+                        sub my_great_calc {
+                                my $input=shift;
+                                $input*2/5;
+                        }
+                }
+
+        }]
+
+        Result of calculation: @{[my_great_calc(12)]}
+    ```
+
+- 'Include' Templates within templates easily:
+
+    ```
+        @{[include("path_to_file")]}
+    ```
+
+- Recursive sub template loading
+
+    ```perl
+        @{[ plx "path_to_sub_template" ]}
+    ```
+
+- Conditional rendering
+
+    ```
+        @{[ $flag and $var]}
+
+        @{[ $flag?$var:""]}
+    ```
+
+- Lists/Loops/maps
+
+    ```perl
+        template interpolates @$lists directly
+        
+        Items that are ok:
+         @{[
+                do {
+                        #Standard for loop
+                        my $output;
+                        for(@$items){
+                                $output.=$_."\n" if /ok/;
+                        }
+                        $output;
+                }
+        }]
+
+        More ok items:
+        @{[map {/ok/?"$_\n":()} @$items]}
+
+        
+    ```
+
+- `use` other modules directly in templates:
+
+    ```perl
+        @{[
+                block {
+                        use Time::HiRes qw<time>
+                }
+        ]}
+
+        Time of day right now: @{[time]}
+    ```
+
 Because of the powerful and flexible interpolation of strings in perl, you can
 do just about anything in a Plex template. After all the template is just perl. 
 
@@ -75,31 +194,9 @@ variables using lexical scoping.
 
 Some feature highlights:
 
-- Templates are written in perl syntax
-- Templates are compiled into a perl subroutine
-- Lexical and package variables accessed/created within templates
-- Call and create subroutines within templates
-- 'Include' Templates within templates easily
-- Recursive and conditional sub template loading
-- Declare variables and subroutines in templates
-- `use` other modules directly in templates
-
-To get started after installation, copy the following lines into perl and execute:
-
-```perl
-    use strict;
-    use warnings;
-    use feature "say";
-    use Template::Plex;
-    my %vars=(name=>"Susan", age=>99);
-    my $template=plex ['this is ${name}\'s inline template. $age young'], \%vars;
-    say $template->render;
-    
-    @vars{qw<name age>}=qw<Richard 23>;
-    say $template->render;
-```
-
-For more examples, checkout the examples directory in this distribution.
+The synopsis example is only scratching the surface in terms of features. For
+more examples, checkout the examples directory in this distribution. I hope to
+add more in the future
 
 # MOTIATION
 
@@ -118,7 +215,6 @@ hard work
 - More tests
 - Add a guide document
 - CLI app to render .plex files
-- Fix any bugs
 
 # API
 
@@ -132,30 +228,14 @@ hard work
 Creates a new instance of a template, loaded from a scalar, file path or an
 existing file handle. 
 
-**Multi Argument Version**
-
-If 2 or more arguments are provided, the template is
-loaded and prepared and returned. The returned template can be rendered by
-calling the `render` method on it.
-
-**Single  Argument Version**
-
-If only the first argument is supplied, the template is loaded, prepared, and
-rendered immediately. The rendered text is returned.  This is useful when using
-sub templates, as the variables and options are already available from the top
-level template.
-
-The arguments are detailed below:
-
 - `$path`
 
     This is a required argument.
 
-    If `$path` is a string, it is treated as a file
-    path to a template file. The file is opened and slurped with the content being
-    used as the template
+    If `$path` is a string, it is treated as a file path to a template file. The
+    file is opened and slurped with the content being used as the template.
 
-    If `$path` is filehandle, or GLOB ref, it is slurped with the content being
+    If `$path` is a filehandle, or GLOB ref, it is slurped with the content being
     used as the template. Can be used to read template stored in `__DATA__` for
     example
 
@@ -170,10 +250,11 @@ The arguments are detailed below:
     The top level items of the `$variables_hash` hash are aliased into the
     template using the key name (key names must be valid for a variable name for
     this to operate). This allows an element such as `$fields{name`}> to be
-    directly accessible as `$name`.
+    directly accessible as `$name` in the template and sub templates.
 
-    It also means any external modification of the items in `$variable_hash` will
-    be visible in the template.
+    External modification of the items in `$variable_hash` will be visible in the
+    template. This is thee primary mechanism change inputs for subsequent renders
+    of the template.
 
     In addition, the `$variables_hash` itself is aliased to `%fields` variable
     (note the %) and directly usable in the template like a normal hash e.g.
@@ -181,14 +262,15 @@ The arguments are detailed below:
 
     If the `$variables_hash` is an empty hash ref `{}` or `undef` then no
     variables will be lexically aliased. The only variables accessible to the
-    template will be via the `render` method call
+    template will be via the `render` method call.
 
-- `Options`
+- `%options`
 
     These are non required arguments, but must be key value pairs when used.
 
-    Options are stored lexically in the rendering sub in the variable `%options`
-    for recursive `plex` calls within a template.
+    Options are stored lexically for access in the template in the variable
+    `%options`. This variable is automatically used as the options argument in
+    recursive calls to `plex` or `plx`, if no options are provided
 
     Currently supported options are:
 
@@ -203,8 +285,40 @@ The arguments are detailed below:
         not be scanned  and will prevent the `include` feature from operating.
         See `include` for more details
 
-        This doesn't impact recursive calls to `plex` when dynamically/conditionally
+        This doesn't impact recursive calls to `plex` or `plx` when dynamically/conditionally
         loading templates.
+
+    - **no\_block\_fix**
+
+        Disables removing of EOL after a `@{[]}` when  the closing `}]` starts on a
+        new line. Does not effect `@{[]}` on a single line or embedded with other text
+
+        ```
+            eg      
+                    
+                    Line 1
+                    @{[
+                            ""
+                    ]}              <-- this NL removed by default
+                    Line 3  
+            
+        ```
+
+        In the above example, the default behaviour is to remove the newline after the
+        closing `]}` when it is on a separate line. The rendered output would be:
+
+        ```
+                    Line1
+                    Line3
+        ```
+
+        If block fix was disabled (i.e. `no_block_fix` was true) the output would be:
+
+        ```
+                    Line1
+
+                    Line3
+        ```
 
     - **package**
 
@@ -229,6 +343,27 @@ The arguments are detailed below:
                 my $obj=plex "template.plex", $hash, root=>$template_dir;
     ```
 
+## `plx`
+
+```
+    plex $path, $variables_hash, %options
+```
+
+Arguments are the same as `plex`.  Similar to the `plex` subroutine, however
+it loads, caches and immediately executes the template.  Somewhat equivalent
+to:
+
+```
+    state $template=plex ...;
+    $template->render;
+```
+
+The template is cached so that next time `plx` is called from the same
+file/line, it reuses the code.
+
+Makes using recursive templates very easy, however does have the slight
+overhead of generating cache keys and actually performing the cache lookup
+
 ## `render`
 
 ```
@@ -251,7 +386,7 @@ hash containing field variables. `fields` is aliased into the template as
             My name is $fields{John}
 ```
 
-Note that the lexically aliased variables in `plex` are independent to the
+Note that the lexically aliased variables setup in `plex` or `plx` are independent to the
 `%fields` variable and can both be used simultaneously in a template
 
 ## `include`
@@ -264,9 +399,10 @@ Note that the lexically aliased variables in `plex` are independent to the
 
 Used in templates only.
 
-This is a special directive that substitutes the text **@{\[include("path")\]}**
-with the contents of the file pointed to by path. This is a preprocessing step
-which happens before the template is prepared for execution
+This is a special directive that substitutes the text similar to
+**@{\[include("path")\]}** with the contents of the file pointed to by path. This
+is a preprocessing step which happens before the template is prepared for
+execution
 
 This API is only available in templates. If `root` was included in the options
 to `plex`, then it is prepended to `path` if defined.
@@ -275,6 +411,45 @@ When a template is loaded by `plex` the processing of this is
 subject to the `no_include` option. If `no_include` is specified, any
 template text that contains the `@{[include("path")}]` text will result in a
 syntax error
+
+## block
+
+```
+    block { ... }
+```
+
+A subroutine which executes a block just like the built in  `do`. However it
+always returns an empty array ref (`[]`).
+
+When used in a template in the `@{[]}` construct, arbitrary statements can be
+executed. However, as a reference to an empty array is returned, perl's
+interpolation won't inject 'last statement' values into your template.
+
+If you DO want the last statement returned into the template, use the built in
+`do`.
+
+```perl
+    eg
+            
+            @{[
+                    # This will assign a variable for use later in the template
+                    # but WILL NOT inject the value 1 into template when rendered
+                    block{
+                            $i=1;
+                    }
+
+            ]}
+
+
+            @{[
+                    # This will assign a variable for use later in the tamplate
+                    # AND immediately inject '1' into the template when rendered
+                    do {
+                            $i=1
+                    }
+
+            ]}
+```
 
 # PLEX TEMPLATE SYNTAX \\w EXAMPLES
 
@@ -295,8 +470,8 @@ file or in the `__DATA__ ` section:
     Good day!
 ```
 
-Everything in the text is valid syntax in double quote operator, but the outer
-double quote operator is omitted.
+Everything in the text is valid syntax withing double quote operators, but the outer
+double quote markers are omitted.
 
 Or in other words, the template looks like plain text, but with double quoted
 added, it is valid perl code.
@@ -332,14 +507,15 @@ braces and lets you do some powerful things:
     Doing math a + b = @{[ $a+$b ]}
     Building an array @{[ uc("red"),uc("blue")]}
     Mapping @{[ join "\n", map uc, @items]}
+    Conditional interpolation @{[ $var and "insert on true"]}
     
 ```
 
 ## Executing Multiple Statements
 
-When a single statement won't do, the `do{}` construct executes a block, which
-can have any number of statements and returns the last statement executed into
-the template
+When a single statement won't do, the `do{}`  or `block` construct executes a
+block, which can have any number of statements; `do` returns the last
+statement into the template where as block does not
 
 ```perl
     Executing multiple statments @{[ do {
@@ -352,12 +528,13 @@ the template
 
 ## Using/Requiring Modules
 
-Again standard perl syntax for the win
+Again standard perl syntax for the win. `BEGIN` block is executed as early as
+possible, before the rest of the template executes
 
 ```perl
     Template will call hi res time 
     The time is: @{[ time ]}
-    @{[ do {
+    @{[ block {
             BEGIN {
                     use Time::HiRes qw<time>;
             }
@@ -367,7 +544,7 @@ Again standard perl syntax for the win
 
 ## Declaring Variables
 
-Variables can be declared in the `@{[..}]` container. 
+Variables can be declared in the `@{[..}]` container.
 
 `my` variables will only be visible within the `@{[..]}` block it was defined.
 
@@ -445,12 +622,11 @@ package is created for each top level use of plex to prevent name collisions.
     ```
 
     If you are declaring a package variable, you might not want its value injected
-    into the template at that point.  So instead you could use `do{..}` execute
-    multiple statements, with the last statement being an empty string (or the
-    value you want returned into the template).
+    into the template at that point.  So instead you could use `block{..}` execute
+    multiple statements and not inject the last statement:
 
     ```
-        @{[ do {our $temp=1;""} }];
+        @{[ block {our $temp=1;} }];
     ```
 
 - Last newline of templates are chomped

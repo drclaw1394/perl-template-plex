@@ -14,7 +14,7 @@ use Exporter 'import';
 #use Data::Dumper;
 
 
-our %EXPORT_TAGS = ( 'all' => [ qw( plex plx  block) ] );
+our %EXPORT_TAGS = ( 'all' => [ qw( plex plx  block pl plex_clear jmap) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -75,7 +75,8 @@ $out.='
 	}
 
 $out.='
-		use Template::Plex qw<block>;
+		use Template::Plex qw<pl block plex_clear jmap>;
+		use String::Util qw<:all>;
 		my $ref=eval Template::Plex::bootstrap (@_);
 		if($@ and !$ref){
 			print  $@;
@@ -102,7 +103,7 @@ $out.='
 	my sub plx {
 		my ($path,$vars,%opts)=@_;
 
-		my $id=join "", caller;
+		my $id=$path.join "", caller;
 		$cache{$id} and return $cache{$id}->render;
 		
 		my $template=&plex;
@@ -111,6 +112,9 @@ $out.='
 		
 		$cache{$id}//=$template;
 		$template->render;
+	}
+	my sub plex_clear {
+		%cache=();
 	}
 
 sub {
@@ -205,7 +209,7 @@ my %cache; #toplevel cache
 #Load template and render in one call. Easy for on offs
 sub plx {
 	my ($path,$vars,%opts)=@_;
-	my $id=join "", caller;
+	my $id=$path.join "", caller;
 	$cache{$id} and "exisiting !" and return $cache{$id}->render;
 	my $template=&plex;
 
@@ -215,11 +219,17 @@ sub plx {
 	$template->render;
 }
 
+sub plex_clear {
+	#say join "\n", keys %cache;
+	%cache=();
+}
+
 
 sub block :prototype(&) {
 	$_[0]->();
 	return "";
 }
+*pl=\*block;
 
 
 
@@ -276,6 +286,15 @@ sub new{
 	else {
 		$data;
 	}
+}
+
+#Join map
+sub jmap :prototype(&@){
+	my $sub=shift;	#block is first
+	my $data=pop;	#Data is last
+	my $delimiter=shift//"";	#delimiter is whats left
+	say "Data: ".$data;
+	join $delimiter, map &$sub, ($data//[])->@*;
 }
 
 1;
