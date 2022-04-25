@@ -492,12 +492,12 @@ Very handy for rendering lists:
 	]}
 	Any more potential output
 
-Prevents the current template from generating rendered output. Instead it will
-return an empty string.  Variables can still be manipulated by template before
-the C<skip> call
+This subroutine prevents the current template from generating rendered output.
+Instead it will return an empty string.  Variables can still be manipulated by
+template before the C<skip> call.
 
 Useful to conditionally skip the body of a template, but configure the variable
-hash for preprocessing.
+hash for preprocessing in a C<@{[block{...}]}> structure
 
 
 =head1 FILTERS

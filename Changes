@@ -1,8 +1,11 @@
 Revision history for Perl extension Template::Plex.
-0.3.0
 
-	- Subtemplates now can modify top level arguments hash (ie add keys not previously available)
-	- Added 'skip' sub which cancels the current templates rendering
+0.3.0  Mon 25 Apr 2022 20:43:10 AEST
+
+	- Subtemplates now can modify top level arguments hash (ie add keys not
+	  previously available)
+	- Added 'skip' sub which cancels the current templates rendering, but
+	  allows variable manipulation
 	- Added tests for skip and sub template argument manipulation
 	- Updated pod 
 
