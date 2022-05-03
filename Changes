@@ -1,5 +1,13 @@
 Revision history for Perl extension Template::Plex.
 
+0.4.0
+
+	- Added %meta has to store filename and load/processing options
+	- Added 'use' key in options hash to allow using of packages in lexical scope
+	- Added meta_ field in Template::Plex class, with accessor. Caller now has access
+ 	to meta data in template
+
+
 0.3.0  Mon 25 Apr 2022 20:43:10 AEST
 
 	- Subtemplates now can modify top level arguments hash (ie add keys not

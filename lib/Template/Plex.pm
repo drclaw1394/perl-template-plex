@@ -4,7 +4,7 @@ use warnings;
 
 use Symbol qw<delete_package>;
 use Carp qw<carp croak>;
-use version; our $VERSION = version->declare('v0.3.0');
+use version; our $VERSION = version->declare('v0.4.0');
 use feature qw<say state refaliasing lexical_subs>;
 no warnings "experimental";
 
@@ -26,7 +26,7 @@ our @EXPORT = qw(
 my $Include=qr|\@\{\s*\[\s*include\s*\(\s*(.*?)\s*\)\s*\] \s* \}|x;
 
 use constant KEY_OFFSET=>0;
-use enum  ("package_=".KEY_OFFSET, qw<sub_>);
+use enum  ("package_=".KEY_OFFSET, qw<meta_ sub_>);
 use constant KEY_COUNT=>sub_-package_+1;
 
 
@@ -68,6 +68,8 @@ $out.='
 		my ($self,undef, $href,%opts)=@_;
 		$href//={};
 		\my %fields=$href;
+		\my %meta=\%opts;
+		$self->[Template::Plex::meta_]=\%opts;
 		';
 	#need this to prevent variables going out of scope
 	#and avoid warnings
@@ -75,11 +77,19 @@ $out.='
 		$out.= "1 or \$$k;\n";
 	}
 
+
 $out.='
 		use Template::Plex qw<pl block plex_clear jmap>;
 		use String::Util qw<:all>;
+		';
+
+		for($opts{use}->@*){
+			$out.="use $_;\n";
+		}
+$out.='
 		my $ref=eval Template::Plex::bootstrap (@_);
 		if($@ and !$ref){
+			print STDERR "Error in $opts{file}";
 			print  $@;
 			print  $!;
 		}
@@ -145,9 +155,12 @@ sub _prepare_template{
 	my ($self, undef, $href, %opts)=@_;
 	$href//={};
 	\my %fields=$href;
+	\my %meta=\%opts;
+	$self->[Template::Plex::meta_]=\%opts;
 
  	my $ref=eval &Template::Plex::bootstrap;
 	if($@ and !$ref){
+		print STDERR "Error in $opts{file}";
 		print  STDERR "EVAL: ",$@;
 		print  STDERR "EVAL: ",$!;
 	}
@@ -288,11 +301,18 @@ sub new{
 
 		state $package=0;
 		$options{package}//="Template::Plex::temp".$package++; #force a unique package if non specified
+		$options{file}//=$path;
+		$options{self}//=$self;
+		#$options{args}//=$args;
 		$prepare->($self, $data, $args, %options);	#Prepare in the correct scope
 	}
 	else {
 		$data;
 	}
+}
+
+sub meta :lvalue {
+	return $_[0][Template::Plex::meta_];
 }
 
 #Join map
