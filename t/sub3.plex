@@ -1,2 +1,2 @@
 Sub template 2 $value
-@{[ skip ]}
+@{[ $self->skip ]}

@@ -2,7 +2,7 @@ Revision history for Perl extension Template::Plex.
 
 0.4.0
 
-	- Added %meta has to store filename and load/processing options
+	- Added %meta to store filename and load/processing options
 	- Added 'use' key in options hash to allow using of packages in lexical scope
 	- Added meta_ field in Template::Plex class, with accessor. Caller now has access
  	to meta data in template

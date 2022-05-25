@@ -10,6 +10,7 @@ no warnings "experimental";
 
 #use File::Basename qw<dirname basename>;
 use File::Spec::Functions qw<catfile>;
+use File::Basename qw<dirname>;
 use Exporter 'import';
 #use Data::Dumper;
 
@@ -26,7 +27,7 @@ our @EXPORT = qw(
 my $Include=qr|\@\{\s*\[\s*include\s*\(\s*(.*?)\s*\)\s*\] \s* \}|x;
 
 use constant KEY_OFFSET=>0;
-use enum  ("package_=".KEY_OFFSET, qw<meta_ sub_>);
+use enum  ("package_=".KEY_OFFSET, qw<meta_ args_ skip_ sub_>);
 use constant KEY_COUNT=>sub_-package_+1;
 
 
@@ -70,6 +71,7 @@ $out.='
 		\my %fields=$href;
 		\my %meta=\%opts;
 		$self->[Template::Plex::meta_]=\%opts;
+		$self->[Template::Plex::args_]=$href;
 		';
 	#need this to prevent variables going out of scope
 	#and avoid warnings
@@ -110,6 +112,14 @@ $out.='
                 my $template=Template::Plex->new($prepare, $path, $vars?$vars:\%fields, %opts?%opts:%options);
                 $template;
         }
+	my sub plex_clear {
+		%cache=();
+	}
+        my sub skip{
+                goto _PLEX_SKIP;
+        }
+
+	$self->[Template::Plex::skip_]=\&skip;
 
 	my sub plx {
 		my ($path,$vars,%opts)=@_;
@@ -124,24 +134,21 @@ $out.='
 		$cache{$id}//=$template;
 		$template->render;
 	}
-	my sub plex_clear {
-		%cache=();
-	}
-	my sub skip{
-		goto _PLEX_SKIP;	
-	}
 
-sub {
-	no warnings \'uninitialized\';
-	no strict;
-	my $self=shift;
-	#say "FIELDS: ", %fields;
-	\\my %fields=shift//\\%fields;
-	return qq{'.$_data_.'};
-	_PLEX_SKIP:
+	sub {
+		no warnings \'uninitialized\';
+		no strict;
+		my $self=shift;
+
+		\\my %fields=shift//\\%fields;
+
+
+		return qq{'.$_data_.'};
+
+		_PLEX_SKIP:
 		"";
 
-}
+	}
 };';
 my $line=0;
 #say map { $line++ . $_."\n"; } split "\n", $out;
@@ -157,6 +164,7 @@ sub _prepare_template{
 	\my %fields=$href;
 	\my %meta=\%opts;
 	$self->[Template::Plex::meta_]=\%opts;
+	$self->[Template::Plex::args_]=$href;
 
  	my $ref=eval &Template::Plex::bootstrap;
 	if($@ and !$ref){
@@ -169,7 +177,11 @@ sub _prepare_template{
 }
 
 sub render {
-	$_[0][sub_](@_);
+	return $_[0][sub_](@_);
+}
+
+sub skip {
+	$_[0]->[skip_]->();
 }
 
 sub sub {
@@ -240,7 +252,6 @@ sub plx {
 }
 
 sub plex_clear {
-	#say join "\n", keys %cache;
 	%cache=();
 }
 
@@ -274,6 +285,7 @@ sub new{
 		else{
 			#Assume a path
 			#Prepend the root if present
+			$options{file}=$path;
 			$path=catfile $root, $path if $root;
 			my $fh;
 			if(open $fh, "<", $path){
@@ -301,7 +313,6 @@ sub new{
 
 		state $package=0;
 		$options{package}//="Template::Plex::temp".$package++; #force a unique package if non specified
-		$options{file}//=$path;
 		$options{self}//=$self;
 		#$options{args}//=$args;
 		$prepare->($self, $data, $args, %options);	#Prepare in the correct scope
@@ -313,6 +324,27 @@ sub new{
 
 sub meta :lvalue {
 	return $_[0][Template::Plex::meta_];
+}
+
+sub args:lvalue {
+	return $_[0][Template::Plex::args_];
+}
+# Builds a relative path relative to the path of template
+sub rel2me {
+	my $self=shift;
+	my $root=$self->[meta_]{root};
+
+	# use path to template or cwd if not existing
+	my $base=dirname($self->[meta_]{file})//".";
+	map $base."/".$_, @_;	
+}
+
+sub rel2root{
+	# use template root		
+	my $self=shift;
+	# use path to template or cwd if not existing
+	my $base=$self->[meta_]{root}//".";
+	map $base."/".$_, @_;	
 }
 
 #Join map
