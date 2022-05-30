@@ -29,6 +29,7 @@ Write a template:
 Load the template with C<plex>:
 
 	my $template= plex "my_template.plex", \%vars;
+	$template->setup;
 
 
 Render it:

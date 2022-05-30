@@ -17,9 +17,9 @@ use File::Basename qw<dirname>;
 use Exporter 'import';
 
 
-our %EXPORT_TAGS = ( 'all' => [ qw( plex plx  block pl plex_clear jmap) ] );
+#our %EXPORT_TAGS = ( 'all' => [ qw( plex plx  block pl plex_clear jmap) ] );
 
-our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+our @EXPORT_OK = qw<plex plx block pl plex_clear jmap>;# @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
 	plex
@@ -27,12 +27,6 @@ our @EXPORT = qw(
 );
 
 my $Include=qr|\@\{\s*\[\s*include\s*\(\s*(.*?)\s*\)\s*\] \s* \}|x;
-
-###################################################################
-# use constant KEY_OFFSET=>0;                                     #
-# use enum  ("package_=".KEY_OFFSET, qw<meta_ args_ skip_ sub_>); #
-# use constant KEY_COUNT=>sub_-package_+1;                        #
-###################################################################
 
 
 sub new;	#forward declare new;
@@ -60,7 +54,9 @@ sub  bootstrap{
 	\my %fields=$href;
 
 my $out="package $opts{package} {
+use Template::Plex qw<pl block plex_clear jmap>;
 ";
+
 $out.='my $self=$plex;
 ';
 
@@ -68,48 +64,12 @@ $out.= '	\my %fields=$href;
 ';
 $out.='		my %options=%opts; 
 ' if keys %opts;
+                for($opts{use}->@*){
+			$out.="use $_;\n";
+                }
 
 $out.=lexical($href);		#add aliased variables	from hash
 $out.='
-	my $prepare=sub {
-		my ($plex,undef, $href,%opts)=@_;
-		$href//={};
-		\my %fields=$href;
-		\my %meta=\%opts;
-
-		#$plex now variable is now of base class
-		$plex=($options{base}//"Template::Plex::Base")->new($plex);
-
-		$plex->[Template::Plex::Base::meta_]=\%opts;
-		$plex->[Template::Plex::Base::args_]=$href;
-		';
-	#need this to prevent variables going out of scope
-	#and avoid warnings
-	for my $k (keys %fields){
-		$out.= "1 or \$$k;\n";
-	}
-
-
-$out.='
-		use Template::Plex qw<pl block plex_clear jmap>;
-		use Template::Plex::Base;
-		use String::Util qw<:all>;
-		';
-
-		for($opts{use}->@*){
-			$out.="use $_;\n";
-		}
-$out.='
-		my $ref=eval Template::Plex::bootstrap (@_);
-		if($@ and !$ref){
-			print STDERR "Error in $opts{file}";
-			print  $@;
-			print  $!;
-		}
-		$plex->[Template::Plex::Base::sub_]=$ref;
-		$plex;
-	};
-
 	my %cache;	#Stores code refs using caller as keys
 
 	#lexical plex changes the prepare and also reuses options with out making it explicit
@@ -118,9 +78,7 @@ $out.='
 		\my %fields=$href;
 
 
-                #unshift @_, $prepare;  #Sub templates now access lexical plex sub routine
-                                        #with access to its scoped $prepare sub and variables
-                my $template=Template::Plex->new($prepare, $path, $vars?$vars:\%fields, %opts?%opts:%options);
+                my $template=Template::Plex->new(\&Template::Plex::_prepare_template, $path, $vars?$vars:\%fields, %opts?%opts:%options);
 
 		$template;
         }
@@ -155,12 +113,11 @@ $out.='
 	}
 
 	my sub init :prototype(&){
-		$self->init(@_);
+		$self->_init(@_);
 	}
 
 
 	sub {
-		package '.$opts{package}.';
 		no warnings \'uninitialized\';
 		no strict;
 		#my $plex=shift;
@@ -207,29 +164,9 @@ sub _prepare_template{
 	$plex;
 }
 
-###################################
-# sub render {                    #
-#         return $_[0][sub_](@_); #
-# }                               #
-###################################
 
-###############################
-# sub skip {                  #
-#         $_[0]->[skip_]->(); #
-# }                           #
-###############################
 
-########################
-# sub sub {            #
-#         $_[0][sub_]; #
-# }                    #
-########################
 
-##############################################################
-# sub DESTROY {                                              #
-#         delete_package $_[0][package_] if $_[0][package_]; #
-# }                                                          #
-##############################################################
 
 #a little helper to allow 'including' templates into each other
 sub _munge {
@@ -358,8 +295,8 @@ sub new{
 		#Returns the render sub
 
 		state $package=0;
-		say "MAKING NEW TEMPLATE $package $path";
-		$options{package}//="Template::Plex::temp".$package++; #force a unique package if non specified
+		++$package;
+		$options{package}//="Template::Plex::temp".$package; #force a unique package if non specified
 		#$options{self}//=$plex;
 		#$options{args}//=$args;
 		$prepare->($plex, $data, $args, %options);	#Prepare in the correct scope
@@ -369,32 +306,6 @@ sub new{
 	}
 }
 
-#############################################################
-# sub meta :lvalue {                                        #
-#         return $_[0][Template::Plex::meta_];              #
-# }                                                         #
-#                                                           #
-# sub args:lvalue {                                         #
-#         return $_[0][Template::Plex::args_];              #
-# }                                                         #
-# # Builds a relative path relative to the path of template #
-# sub rel2me {                                              #
-#         my $plex=shift;                                   #
-#         my $root=$plex->[meta_]{root};                    #
-#                                                           #
-#         # use path to template or cwd if not existing     #
-#         my $base=dirname($plex->[meta_]{file})//".";      #
-#         map $base."/".$_, @_;                             #
-# }                                                         #
-#                                                           #
-# sub rel2root{                                             #
-#         # use template root                               #
-#         my $plex=shift;                                   #
-#         # use path to template or cwd if not existing     #
-#         my $base=$plex->[meta_]{root}//".";               #
-#         map $base."/".$_, @_;                             #
-# }                                                         #
-#############################################################
 
 #Join map
 sub jmap :prototype(&@){
