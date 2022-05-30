@@ -1,12 +1,16 @@
 Revision history for Perl extension Template::Plex.
 
 0.4.0
+	- User subclassing is now possible
+	- Sub classes can access metadata (options) and arguments( variables) via
+   	  accessor methods meta and args
+	- The current template is stored in a lexical variable $plex
+	- Template is of type Template::Plex::Base or user subclass
 
 	- Added %meta to store filename and load/processing options
 	- Added 'use' key in options hash to allow using of packages in lexical scope
-	- Added meta_ field in Template::Plex class, with accessor. Caller now has access
- 	to meta data in template
-
+	- Added 'base' key in options hash to specify base class for template
+	- Much easier to implement new templating systems on top this module now
 
 0.3.0  Mon 25 Apr 2022 20:43:10 AEST
 

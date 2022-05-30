@@ -1,2 +1,2 @@
 Sub template 2 $value
-@{[ $self->skip ]}
+@{[ $plex->skip ]}

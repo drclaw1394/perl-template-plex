@@ -4,7 +4,9 @@ WriteMakefile(
 	VERSION_FROM		=> 'lib/Template/Plex.pm', 
 	PREREQ_PM		=> {
 					enum=>0,
-					"String::Util"=>0
+					"String::Util"=>0,
+					"Log::ger"=>0,
+					"Log::OK"=>0
 
 				}, 
 	ABSTRACT_FROM		=> 'lib/Template/Plex.pod', # retrieve abstract from module

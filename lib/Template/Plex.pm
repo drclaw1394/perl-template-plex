@@ -2,9 +2,12 @@ package Template::Plex;
 use strict;
 use warnings;
 
-use Symbol qw<delete_package>;
-use Carp qw<carp croak>;
 use version; our $VERSION = version->declare('v0.4.0');
+use Template::Plex::Base;
+
+#use Symbol qw<delete_package>;
+use Carp qw<carp croak>;
+
 use feature qw<say state refaliasing lexical_subs>;
 no warnings "experimental";
 
@@ -12,7 +15,6 @@ no warnings "experimental";
 use File::Spec::Functions qw<catfile>;
 use File::Basename qw<dirname>;
 use Exporter 'import';
-#use Data::Dumper;
 
 
 our %EXPORT_TAGS = ( 'all' => [ qw( plex plx  block pl plex_clear jmap) ] );
@@ -26,9 +28,11 @@ our @EXPORT = qw(
 
 my $Include=qr|\@\{\s*\[\s*include\s*\(\s*(.*?)\s*\)\s*\] \s* \}|x;
 
-use constant KEY_OFFSET=>0;
-use enum  ("package_=".KEY_OFFSET, qw<meta_ args_ skip_ sub_>);
-use constant KEY_COUNT=>sub_-package_+1;
+###################################################################
+# use constant KEY_OFFSET=>0;                                     #
+# use enum  ("package_=".KEY_OFFSET, qw<meta_ args_ skip_ sub_>); #
+# use constant KEY_COUNT=>sub_-package_+1;                        #
+###################################################################
 
 
 sub new;	#forward declare new;
@@ -47,16 +51,18 @@ sub lexical{
 }
 
 sub  bootstrap{
-	my $self=shift;
+	my $plex=shift;
 	\my $_data_=\shift;
 	my $href=shift;
 	my %opts=@_;
 
-	#say  "Bootstrap: ", Dumper $href;
 	$href//={};
 	\my %fields=$href;
 
-my $out="package $opts{package} {";
+my $out="package $opts{package} {
+";
+$out.='my $self=$plex;
+';
 
 $out.= '	\my %fields=$href;
 ';
@@ -66,12 +72,16 @@ $out.='		my %options=%opts;
 $out.=lexical($href);		#add aliased variables	from hash
 $out.='
 	my $prepare=sub {
-		my ($self,undef, $href,%opts)=@_;
+		my ($plex,undef, $href,%opts)=@_;
 		$href//={};
 		\my %fields=$href;
 		\my %meta=\%opts;
-		$self->[Template::Plex::meta_]=\%opts;
-		$self->[Template::Plex::args_]=$href;
+
+		#$plex now variable is now of base class
+		$plex=($options{base}//"Template::Plex::Base")->new($plex);
+
+		$plex->[Template::Plex::Base::meta_]=\%opts;
+		$plex->[Template::Plex::Base::args_]=$href;
 		';
 	#need this to prevent variables going out of scope
 	#and avoid warnings
@@ -82,6 +92,7 @@ $out.='
 
 $out.='
 		use Template::Plex qw<pl block plex_clear jmap>;
+		use Template::Plex::Base;
 		use String::Util qw<:all>;
 		';
 
@@ -95,8 +106,8 @@ $out.='
 			print  $@;
 			print  $!;
 		}
-		$self->[Template::Plex::sub_]=$ref;
-		$self;
+		$plex->[Template::Plex::Base::sub_]=$ref;
+		$plex;
 	};
 
 	my %cache;	#Stores code refs using caller as keys
@@ -110,16 +121,18 @@ $out.='
                 #unshift @_, $prepare;  #Sub templates now access lexical plex sub routine
                                         #with access to its scoped $prepare sub and variables
                 my $template=Template::Plex->new($prepare, $path, $vars?$vars:\%fields, %opts?%opts:%options);
-                $template;
+
+		$template;
         }
 	my sub plex_clear {
 		%cache=();
 	}
         my sub skip{
-                goto _PLEX_SKIP;
+		goto _PLEX_SKIP;
         }
 
-	$self->[Template::Plex::skip_]=\&skip;
+
+	$plex->[Template::Plex::Base::skip_]=\&skip;
 
 	my sub plx {
 		my ($path,$vars,%opts)=@_;
@@ -128,16 +141,29 @@ $out.='
 		$cache{$id} and return $cache{$id}->render;
 		
 		my $template=&plex;
-
-		#TODO: check for errors
-		
 		$cache{$id}//=$template;
-		$template->render;
+		my $result=$template->setup;
+
+		
+
+		# Only call render if init flag is not set
+		# This means a single stage template with no init section
+	
+		$result=$template->render unless $template->[Template::Plex::Base::init_done_flag_];
+
+		$result;
 	}
 
+	my sub init :prototype(&){
+		$self->init(@_);
+	}
+
+
 	sub {
+		package '.$opts{package}.';
 		no warnings \'uninitialized\';
 		no strict;
+		#my $plex=shift;
 		my $self=shift;
 
 		\\my %fields=shift//\\%fields;
@@ -150,6 +176,7 @@ $out.='
 
 	}
 };';
+
 my $line=0;
 #say map { $line++ . $_."\n"; } split "\n", $out;
 $out;
@@ -159,12 +186,16 @@ $out;
 # Second argument is a hash ref to default or base level fields
 # returns a code reference which when called renders the template with the values
 sub _prepare_template{
-	my ($self, undef, $href, %opts)=@_;
+	my ($plex, undef, $href, %opts)=@_;
 	$href//={};
 	\my %fields=$href;
 	\my %meta=\%opts;
-	$self->[Template::Plex::meta_]=\%opts;
-	$self->[Template::Plex::args_]=$href;
+
+	#$plex now variable is now of base class
+	$plex=($opts{base}//"Template::Plex::Base")->new($plex);
+
+	$plex->[Template::Plex::Base::meta_]=\%opts;
+	$plex->[Template::Plex::Base::args_]=$href;
 
  	my $ref=eval &Template::Plex::bootstrap;
 	if($@ and !$ref){
@@ -172,25 +203,33 @@ sub _prepare_template{
 		print  STDERR "EVAL: ",$@;
 		print  STDERR "EVAL: ",$!;
 	}
-	$self->[Template::Plex::sub_]=$ref;
-	$self;
+	$plex->[Template::Plex::Base::sub_]=$ref;
+	$plex;
 }
 
-sub render {
-	return $_[0][sub_](@_);
-}
+###################################
+# sub render {                    #
+#         return $_[0][sub_](@_); #
+# }                               #
+###################################
 
-sub skip {
-	$_[0]->[skip_]->();
-}
+###############################
+# sub skip {                  #
+#         $_[0]->[skip_]->(); #
+# }                           #
+###############################
 
-sub sub {
-	$_[0][sub_];
-}
+########################
+# sub sub {            #
+#         $_[0][sub_]; #
+# }                    #
+########################
 
-sub DESTROY {
-	delete_package $_[0][package_] if $_[0][package_];
-}
+##############################################################
+# sub DESTROY {                                              #
+#         delete_package $_[0][package_] if $_[0][package_]; #
+# }                                                          #
+##############################################################
 
 #a little helper to allow 'including' templates into each other
 sub _munge {
@@ -234,6 +273,7 @@ sub plex{
 	my ($path,$vars,%opts)=@_;
 	#unshift @_, $prepare;	#push current top level scope
 	my $template=Template::Plex->new($prepare,$path,$vars,%opts);
+
 	$template;
 }
 
@@ -244,11 +284,17 @@ sub plx {
 	my $id=$path.join "", caller;
 	$cache{$id} and "exisiting !" and return $cache{$id}->render;
 	my $template=&plex;
-
-	#TODO: check for errors
-	
 	$cache{$id}//=$template;
-	$template->render;
+
+	my $result=$template->setup;
+
+
+	
+	# Only call render if init flag is not set
+	# This means a single stage template with no init section
+	$result=$template->render unless $template->[Template::Plex::Base::init_done_flag_];
+
+	$result;
 }
 
 sub plex_clear {
@@ -265,7 +311,7 @@ sub block :prototype(&) {
 
 
 sub new{
-	my $self=bless [], shift;
+	my $plex=bless [], shift;
 	my ($prepare, $path, $args, %options)=@_;
 	my $root=$options{root};
 	#croak "plex: even number of arguments required" if (@_-1)%2;
@@ -312,40 +358,43 @@ sub new{
 		#Returns the render sub
 
 		state $package=0;
+		say "MAKING NEW TEMPLATE $package $path";
 		$options{package}//="Template::Plex::temp".$package++; #force a unique package if non specified
-		$options{self}//=$self;
+		#$options{self}//=$plex;
 		#$options{args}//=$args;
-		$prepare->($self, $data, $args, %options);	#Prepare in the correct scope
+		$prepare->($plex, $data, $args, %options);	#Prepare in the correct scope
 	}
 	else {
 		$data;
 	}
 }
 
-sub meta :lvalue {
-	return $_[0][Template::Plex::meta_];
-}
-
-sub args:lvalue {
-	return $_[0][Template::Plex::args_];
-}
-# Builds a relative path relative to the path of template
-sub rel2me {
-	my $self=shift;
-	my $root=$self->[meta_]{root};
-
-	# use path to template or cwd if not existing
-	my $base=dirname($self->[meta_]{file})//".";
-	map $base."/".$_, @_;	
-}
-
-sub rel2root{
-	# use template root		
-	my $self=shift;
-	# use path to template or cwd if not existing
-	my $base=$self->[meta_]{root}//".";
-	map $base."/".$_, @_;	
-}
+#############################################################
+# sub meta :lvalue {                                        #
+#         return $_[0][Template::Plex::meta_];              #
+# }                                                         #
+#                                                           #
+# sub args:lvalue {                                         #
+#         return $_[0][Template::Plex::args_];              #
+# }                                                         #
+# # Builds a relative path relative to the path of template #
+# sub rel2me {                                              #
+#         my $plex=shift;                                   #
+#         my $root=$plex->[meta_]{root};                    #
+#                                                           #
+#         # use path to template or cwd if not existing     #
+#         my $base=dirname($plex->[meta_]{file})//".";      #
+#         map $base."/".$_, @_;                             #
+# }                                                         #
+#                                                           #
+# sub rel2root{                                             #
+#         # use template root                               #
+#         my $plex=shift;                                   #
+#         # use path to template or cwd if not existing     #
+#         my $base=$plex->[meta_]{root}//".";               #
+#         map $base."/".$_, @_;                             #
+# }                                                         #
+#############################################################
 
 #Join map
 sub jmap :prototype(&@){
@@ -354,5 +403,7 @@ sub jmap :prototype(&@){
 	my $delimiter=shift//"";	#delimiter is whats left
 	join $delimiter, map &$sub, ($data//[])->@*;
 }
+
+
 
 1;

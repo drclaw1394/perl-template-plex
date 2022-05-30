@@ -21,9 +21,10 @@ Setup variables/data you want to alias:
 Write a template:
 
 	#Contents of my_template.plex
-
+	
 	Ordered a $size pizza with $slices slices to share between @$people and
 	myself.  That averages @{[$slices/(@$people+1)]} slices each.
+	
 
 Load the template with C<plex>:
 
@@ -191,6 +192,11 @@ The following are snippets of templates demonstrating some of the feature:
 
 	Time of day right now: @{[time]}
 
+=item * Advanced templating with subclasses (in v0.4)
+
+	Build your own relational templates on top of Template::Plex. Focus on
+	the your logic instead of dealing with template nitty gritty
+
 =back
 
 =head1 MOTIATION
@@ -210,11 +216,13 @@ C<$fields-E<gt>{name}>) or by delimiting with custom syntax (i.e. C<E<lt>%= name
 =item * 
 
 The perl syntax C<@{[...]}>  will execute arbitrary perl statements in a double
-quoted string. 
+quoted string.
+
+Also C<${\ EXPR }> is a short way to execute function and method calls in double quoted strings.
 
 =item * 
 
-Other templating system are very powerful, but have huge a huge APIs and
+Other templating system are very powerful, but have huge APIs and
 options. L<Template::Plex> could have a very minimal API with perl doing the
 hard work
 
@@ -333,11 +341,18 @@ Specifies a package to run the template in. Any C<our> variables defined in
 the template will be in this package.  If a package is not specified, a unique
 package name is created to prevent name collisions
 
+=item B<base>
+
+Specifies the base class type of the template. If not specified, templates are
+of type C<Template::Plex::Base>. Sub classes must inherit from this class. See
+the Sub classing section for more details
+
+
 =back
 
 =item Return value
 
-The return value is C<Template::Plex> object which can be rendered using the
+The return value is C<Template::Plex::Base> (or subclass) object which can be rendered using the
 C<render> method
 
 =item Example Usage
@@ -517,6 +532,40 @@ the template namespace. This includes:
 
 Please consult the L<String::Util> documentation for details
 
+=head1 SUBCLASSING
+
+The class used for templates can be specified as an option to a C<plex> or
+C<plx> call.
+
+This will instantiate the template as an object of this type.  The default
+class is C<Template::Plex::Base>. A user class must ultimately be a descendent
+of this class.
+
+
+This gives the ability to extent and morph the templating system into some cool
+and  wild places
+
+The current instance of template is stored in the lexically scoped C<$plex>
+variable, which is directly accessible in a template:
+	
+		@{[
+			$plex->my_complicated_method
+		]}
+
+=head2 Accessors
+
+=head3 C<meta>
+	
+	$plex->meta
+
+This sub returns a hash ref to the options (ie the C<%options>
+hash) used in the template creation
+
+=head3 C<args>
+
+	$plex->args
+	
+	Returns the hash ref of input variables (ie the C<%fields> hash) of the template.
 
 =head1 TIPS ON USAGE
 
@@ -636,6 +685,7 @@ is in your templates, then maybe this module isn't for you.
 Aliasing means that the template has access to variables outside of it.
 That's the whole point. So again if you don't know what your templates are
 doing, then maybe this module isn't for you
+
 
 =head1 ISSUES 
 

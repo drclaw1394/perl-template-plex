@@ -4,7 +4,7 @@ use warnings;
 use Data::Dumper;
 $Data::Dumper::Deparse=1;
 
-use Test::More tests => 12;
+use Test::More tests => 17;
 
 BEGIN { use_ok('Template::Plex') };
 
@@ -129,3 +129,44 @@ ok $result eq "my name is John not Jill", "Lexical and override access";
 	ok $text eq 'skipped:', "skip template";
 }
 
+{
+	#Testing base class
+	my %vars;
+	my $result=plx ['@{[$plex->__internal_test_proxy__]}'], \%vars;
+
+	ok $result eq "PROXY", "Base class methods";
+
+}
+{
+	#Testing sub class
+	package My::Base{
+		use parent "Template::Plex::Base";
+		sub __internal_test_proxy__{
+			"OVERRIDE";
+
+		}
+	}
+	my %vars;
+	my $result=plx ['@{[$plex->__internal_test_proxy__]}'], \%vars, base=>"My::Base";
+
+	ok $result eq "OVERRIDE", "Subclass methods";
+
+}
+
+{
+
+	#Testing perpare/init
+	my $tt=[
+		'@{[init{
+			$self->args->{test}="testing";
+		} ]}Hello!'
+	];
+
+	my %vars;
+	my $template=plex $tt, \%vars;
+	my $setup=$template->setup;
+	my $render=$template->render;
+	ok $setup eq "", "Setup without render";
+	ok $vars{test} eq "testing", "Setup without render";
+	ok $render eq "Hello!", "Render";
+}
