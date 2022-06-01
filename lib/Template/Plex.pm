@@ -68,7 +68,7 @@ $out.='		my %options=%opts;
 			$out.="use $_;\n";
                 }
 
-$out.=lexical($href);		#add aliased variables	from hash
+$out.=lexical($href) unless $opts{no_alias};		#add aliased variables	from hash
 $out.='
 	my %cache;	#Stores code refs using caller as keys
 
@@ -100,7 +100,7 @@ $out.='
 		
 		my $template=&plex;
 		$cache{$id}//=$template;
-		my $result=$template->setup;
+		my $result=$template->setup($vars);
 
 		
 
