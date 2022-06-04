@@ -295,8 +295,8 @@ sub new{
 		#Returns the render sub
 
 		state $package=0;
-		++$package;
-		$options{package}//="Template::Plex::temp".$package; #force a unique package if non specified
+		$package++;
+		$options{package}="Template::Plex::temp".$package; #force a unique package if non specified
 		#$options{self}//=$plex;
 		#$options{args}//=$args;
 		$prepare->($plex, $data, $args, %options);	#Prepare in the correct scope

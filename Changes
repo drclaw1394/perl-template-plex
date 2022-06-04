@@ -13,6 +13,8 @@ Revision history for Perl extension Template::Plex.
 	- Added 'base' key in options hash to specify base class for template
 	- Much easier to implement new templating systems on top this module now
 	- Removed automatic using of String::Util. Templates can use on demand manually
+	- Fixed bug in recursive template loading would not update the dynamic package name
+	- Added logging support with Log::ger and Log::OK
 
 0.3.0  Mon 25 Apr 2022 20:43:10 AEST
 

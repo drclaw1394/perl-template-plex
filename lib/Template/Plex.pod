@@ -84,9 +84,9 @@ Many templating systems are available, yet none use perl as the template
 language?  Perl already has a great text interpolation so why not use it?
 
 Lexical aliasing allows the input variables to be accessed directly by name
-(i.e. C<$name>) instead of as a member of a hash ref (i.e.
-C<$fields-E<gt>{name}>) or by delimiting with custom syntax (i.e. C<E<lt>%=
-name %E<gt>>)
+(i.e. C<$name>) instead of as a member of a hash ref
+(i.e.C<$fields-E<gt>{name}>) or by delimiting with custom syntax (i.e.
+C<E<lt>%=name%E<gt>>)
 
 =head1 SYNTAX GENESIS
 
@@ -766,27 +766,24 @@ render data being supplied as needed.
 
 =head2 Security
 
-This module uses C<eval> to generate the code ref for rendering. This means
-that your template, being perl code, is being executed. If you do not know what
-is in your templates, then maybe this module isn't for you.
+This module uses C<eval> to generate the code for rendering. This means that
+your template, being perl code, is being executed. If you do not know what is
+in your templates, then maybe this module isn't for you.
 
-Aliasing means that the template has access to variables outside of it.
-That's the whole point. So again if you don't know what your templates are
-doing, then maybe this module isn't for you
+Aliasing means that the template has write access to variables outside of it.
+So again if you don't know what your templates are doing, then maybe this
+module isn't for you
 
 
 =head1 ISSUES 
-
-Currently caching of templates when using C<plx> is primitive. It works, but
-management will likely change. Manual caching with C<state $template=plex ...>
-gives you better control and performance
 
 Debugging templates could be much better
 
 Unless specifically constructed to write to file, templates are completely
 processed in memory.
 
-C<plx> caching will not be effective with literal templates unless they are stored in an anonymous array.
+C<plx> caching will not be effective with literal templates unless they are
+stored in an anonymous array.
 	
 
 
