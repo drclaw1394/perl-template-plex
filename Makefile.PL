@@ -13,7 +13,7 @@ WriteMakefile(
 	AUTHOR			=> 'Ruben Westerberg <drclaw@mac.com>',
 	LICENSE			=> 'mit',
 
-	MIN_PERL_VERSION	=> '5.24.0',		#for ref aliasing
+	MIN_PERL_VERSION	=> '5.36.0',		#for isa
 	TEST_REQUIRES		=> { "Test::More" => 0},
 	CONFIGURE_REQUIRES 	=> {"ExtUtils::MakeMaker"=>0},
 

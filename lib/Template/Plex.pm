@@ -134,9 +134,9 @@ $out.='
 	}
 };';
 
-my $line=0;
+#my $line=0;
 #say map { $line++ . $_."\n"; } split "\n", $out;
-$out;
+#$out;
 };
 
 # First argument the template string/text. This is any valid perl code
@@ -196,12 +196,22 @@ sub _subst_inject {
 		#TODO: Possible point for diagnostics?
 	};
 }
+
 sub _block_fix {
 	#remove any new line immediately after a ]} pair
 	\my $buffer=\(shift);
-	while($buffer=~s/^\]\}\n/]}/gms){
-	}
+	#$buffer=~s/^\]\}$/]}/gms;
+	
+	$buffer=~s/^(\@\{\[.*?\]\})\n/$1/gms;
+        ##############################################
+        # while($buffer=~s/^\]\}\n/]}/gs){           #
+        # }                                          #
+        # while($buffer=~s/^(@\{\[.*?\]\})\n/$1/gs){ #
+        # }                                          #
+        ##############################################
+
 }
+
 my $prepare=\&_prepare_template;
 
 #load a template to be rendered later.
@@ -308,11 +318,10 @@ sub new{
 
 
 #Join map
-sub jmap :prototype(&@){
-	my $sub=shift;	#block is first
-	my $data=pop;	#Data is last
-	my $delimiter=shift//"";	#delimiter is whats left
-	join $delimiter, map &$sub, ($data//[])->@*;
+sub jmap :prototype(&$@){
+	my ($sub,$delimiter)=(shift,shift);	#block is first
+	$delimiter//="";	#delimiter is whats left
+	join $delimiter, map &$sub, @_;
 }
 
 

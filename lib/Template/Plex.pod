@@ -479,19 +479,19 @@ B<Subject to change>.  Clears all compiled templates from the current level.
 
 =head2 jmap
 
-	jmap {block} $delimiter, $array_ref;
+	jmap {block} $delimiter, @array
 
-Performs a join using C<$delimiter> between each item in the C<$array_ref> after
+Performs a join using C<$delimiter> between each item in the C<@array> after
 they are processed through C<block>
-
-C<$delimiter> is optional with the default being an empty string
 
 Very handy for rendering lists:
 
 	eg
 		<ul>
-			@{[jmap {"<li>$_</li>"} "\n", $items]}
+			@{[jmap {"<li>$_</li>"} "\n", @items]}
 		</ul>
+
+Note the lack of comma after the block.
 
 =head2 skip
 
