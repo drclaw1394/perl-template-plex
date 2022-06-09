@@ -1,6 +1,7 @@
 Revision history for Perl extension Template::Plex.
 
 0.4.0
+	- Template inheritance and slotting
 	- Requires Perl 5.36 (for isa)
 	- User subclassing is now possible
 	- Removed redundant code in in peparing templates
@@ -19,6 +20,7 @@ Revision history for Perl extension Template::Plex.
 	- jmap now requires at least two arguments and works with array/list
 	  instead of a reference
 	- Block fix no longer kills multiple newlines after a directive close
+
 
 
 0.3.0  Mon 25 Apr 2022 20:43:10 AEST

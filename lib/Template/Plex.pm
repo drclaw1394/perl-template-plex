@@ -100,16 +100,8 @@ $out.='
 		
 		my $template=&plex;
 		$cache{$id}//=$template;
-		my $result=$template->setup($vars);
-
-		
-
-		# Only call render if init flag is not set
-		# This means a single stage template with no init section
-	
-		$result=$template->render unless $template->[Template::Plex::Base::init_done_flag_];
-
-		$result;
+		$template->setup;
+		$template->render;
 	}
 
 	my sub init :prototype(&){
@@ -232,16 +224,8 @@ sub plx {
 	$cache{$id} and "exisiting !" and return $cache{$id}->render;
 	my $template=&plex;
 	$cache{$id}//=$template;
-
-	my $result=$template->setup;
-
-
-	
-	# Only call render if init flag is not set
-	# This means a single stage template with no init section
-	$result=$template->render unless $template->[Template::Plex::Base::init_done_flag_];
-
-	$result;
+	$template->setup;
+	$template->render;
 }
 
 sub plex_clear {

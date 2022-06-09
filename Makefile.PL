@@ -4,7 +4,6 @@ WriteMakefile(
 	VERSION_FROM		=> 'lib/Template/Plex.pm', 
 	PREREQ_PM		=> {
 					enum=>0,
-					"String::Util"=>0,
 					"Log::ger"=>0,
 					"Log::OK"=>0
 
@@ -13,7 +12,7 @@ WriteMakefile(
 	AUTHOR			=> 'Ruben Westerberg <drclaw@mac.com>',
 	LICENSE			=> 'mit',
 
-	MIN_PERL_VERSION	=> '5.36.0',		#for isa
+	MIN_PERL_VERSION	=> '5.36.0',		#for isa, and multi element for
 	TEST_REQUIRES		=> { "Test::More" => 0},
 	CONFIGURE_REQUIRES 	=> {"ExtUtils::MakeMaker"=>0},
 
