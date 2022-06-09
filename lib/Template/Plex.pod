@@ -35,7 +35,6 @@ Write a template:
 Load the template with C<plex>:
 
 	my $template= plex "my_template.plex", \%vars;
-	$template->setup;
 
 
 Render it:
@@ -62,13 +61,8 @@ Change values and render it again:
 =head1 DESCRIPTION
 
 This module facilitates the use of perl (not embedded perl) as a text
-processing template language and system capable of loading, caching and
-rendering powerful templates. 
-
-It implements a couple of subroutines/directives to perform template
-loading/management (i.e. C<plex>, C<plx>). Additionally it includes a handful
-of directives and options to make mixing code and text simpler (i.e. C<init>,
-C<block> and C<jmap>).
+processing template language and system to load, cache, initialize, inherit,
+fill and render templates.
 
 The 'lexical' part of this module refers to input variables being lexically
 aliased into the template, improving the style and usage.
@@ -79,9 +73,8 @@ functionally.
 
 =head1 MOTIATION
 
-
 Many templating systems are available, yet none use perl as the template
-language?  Perl already has a great text interpolation so why not use it?
+language? Perl already has a great text interpolation, so why not use it?
 
 Lexical aliasing allows the input variables to be accessed directly by name
 (i.e. C<$name>) instead of as a member of a hash ref
@@ -151,8 +144,7 @@ template for example:
 	Calculated @{[my_func]} at @{[time]}
 
 The above uses the C<init> directive which is like C<do> but executes only once
-(though the template might be rendered multiple times) and returns an empty
-string into the template (see the section later in this document).
+even if the template is rendered multiple times.
 
 
 =head2 Rendering a Template
@@ -170,6 +162,12 @@ Keep reading to see how to use the other directives, functions and options to
 write awesome perl templates and execute them effectively 
 
 
+=head1 INHERITANCE MODEL
+
+Templates can be reused by way of inheritance and slots. A slot is like a place
+holder which a child template can inject/override content in a  parent template
+
+Multiple slots can be defined 
 
 
 =head1 API
@@ -178,7 +176,7 @@ The C<Template::Plex> API is small and only consists of functions/directives
 which are usable within a template directly.
 
 When using the C<plex> function, you will need to consult
-L<Template::Plex::Base> and use the C<setup> and C<render> API from that class.
+L<Template::Plex::Base> and use the C<render> API from that class.
 
 =head2 C<plex>
 	
@@ -189,7 +187,6 @@ L<Template::Plex::Base> and use the C<setup> and C<render> API from that class.
 	@{[
 		block {	#or: do, init, pl
 			my $template=plex $path, $variables_hash, %options;
-			$template->setup;
 			my $result=$template->render;
 		}
 	]}
@@ -338,7 +335,8 @@ variables need to be accessed via the C<%fields> hash when this is effect.
 
 =item Return value
 
-The return value is C<Template::Plex::Base> (or subclass) object which can be initialised and rendered using the C<setup> and C<render> methods of that class.
+The return value is C<Template::Plex::Base> (or subclass) object which can be
+rendered using the C<render> methods of that class.
 
 Please refer to L<Template::Plex::Base> for more details.	
 
@@ -351,7 +349,6 @@ Please refer to L<Template::Plex::Base> for more details.
 		my $template_dir="/path/to/dir";
 
 		my $obj=plex "template.plex", $hash, root=>$template_dir;
-		$obj->setup;
 		$obj->render;
 =back
 
@@ -375,7 +372,7 @@ Please refer to L<Template::Plex::Base> for more details.
 
 This is a wrapper around the C<plex> function to make it very easy to use templates recursively. Arguments are the same as C<plex>.
 
-In addition to loading a template, the C<setup> and C<render> methods are
+In addition to loading a template, the C<render> method are
 called on it. 
 
 The result of this function is the rendered template text.
@@ -394,7 +391,6 @@ mapping a template possible in a single line:
 Makes using recursive templates very easy:
 
 	state $template=plex ...;
-	$template->setup;
 	$template->render;
 
 
@@ -481,6 +477,37 @@ rendered multiple times
 
 This is a good location to place C<use> statements;
 
+=head2 inherit
+
+	@{[ init {
+		inherit "Path to template";
+		}
+	]}
+
+Specified the template which will become the current templates  parent. The current template will be rendered into the default stop of the parent.
+
+=head2 slot
+
+	@{[slot name=>$value]}
+
+Declares a slot in a template which can be filled by a child template calling C<fill_slot> directives.
+
+C<name> is the name of the slot to render into the template. If not specified,
+the slot is the default slot which will be rendered by the content of a child
+template.
+
+C<$value> is optional and is the default content to render in the case a child
+does not provide data for the slot. It can be a scalar value or a template
+loaded by C<plex>
+
+
+=head2 fill_slot
+
+	@{[fill_slot name=>$value]}
+
+Fills an inherited slot of name C<name> with C<$value>. 
+
+The default slot can not be specified. It is filled with the rendered result of the child template.
 
 =head2 plex_clear
 

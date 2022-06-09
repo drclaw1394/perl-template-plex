@@ -81,6 +81,7 @@ $out.='
 
                 my $template=Template::Plex->new(\&Template::Plex::_prepare_template, $path, $vars?$vars:\%fields, %opts?%opts:%options);
 
+		$template->setup;
 		$template;
         }
 	my sub plex_clear {
@@ -101,7 +102,7 @@ $out.='
 		
 		my $template=&plex;
 		$cache{$id}//=$template;
-		$template->setup;
+		#$template->setup;
 		$template->render;
 	}
 
@@ -109,6 +110,15 @@ $out.='
 		$self->_init(@_);
 	}
 
+	sub slot {
+		$self->slot(@_);
+	}
+	sub fill_slot {
+		$self->fill_slot(@_);
+	}
+	sub inherit {
+		$self->inherit(@_);
+	}
 
 	sub {
 		no warnings \'uninitialized\';
@@ -225,6 +235,7 @@ sub plex{
 	#unshift @_, $prepare;	#push current top level scope
 	my $template=Template::Plex->new($prepare,$path,$vars,%opts);
 
+	$template->setup;
 	$template;
 }
 
@@ -236,7 +247,7 @@ sub plx {
 	$cache{$id} and "exisiting !" and return $cache{$id}->render;
 	my $template=&plex;
 	$cache{$id}//=$template;
-	$template->setup;
+	#$template->setup;
 	$template->render;
 }
 

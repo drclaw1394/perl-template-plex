@@ -121,23 +121,6 @@ independent to the C<%fields> variable and can both be used simultaneously in a
 template
 
 
-=head2 C<setup>
-
-	$template->setup;
-
-Forces template to render in initialisation mode.
-
-If a template does not have a C<init{}> block, this is equivalent to calling
-C<$template->render> directly.
-
-If a template does have a C<init{}> block, the template is executed up to the
-end of the first C<init {}> block. An empty string is returned. An explicit
-C<$template-E<gt>render> call is need to subsequently render the template.
-
-	
-The C<plx> template directive automatically performs a C<setup> call after the
-template is loaded.  (see L<Template::Plex> for more details)
-
 
 =head2 C<skip>
 
@@ -178,6 +161,8 @@ This can also be used outside template text to inspect a templates input variabl
 
 	$template->args;
 
+
+
 =head1 SUB CLASSING
 
 Sub classing is as per the standard perl C<use parent>. The object storage is
@@ -197,6 +182,10 @@ following as the object
 	use constant  KEY_COUNT=>last_field_ - first_field_ +1;
 
 Any further sub classing will need to repeat this using using your package name.
+
+TODO: 
+ 	Document internal methods
+
 
 
 =head1 AUTHOR
