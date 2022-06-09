@@ -181,10 +181,11 @@ ok $result eq "my name is John not Jill", "Lexical and override access";
 
 	my %vars;
 	my $template=plex $tt, \%vars;
-	$template->setup;
 	my $setup=$template->setup;
-	my $render=$template->render;
 	ok $setup eq "", "Setup without render";
 	ok $vars{test} eq "testing", "Setup without render";
+
+	#my $setup=$template->setup;
+	my $render=$template->render;
 	ok $render eq "Hello!", "Render";
 }

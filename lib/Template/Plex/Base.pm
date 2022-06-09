@@ -171,7 +171,6 @@ sub setup {
 	my ($self)=@_;
 	#Run super setup.
 	Log::OK::DEBUG and log_debug "Plexsite: setup ". $self->meta->{file};
-	#$self->SUPER::setup;
 	$self->_setup;
 
 
@@ -194,11 +193,9 @@ sub render {
 	#If the template uninitialized, we just do a first pass
 	unless($self->init_done_flag){
 
-		#say "setup render of:".$self->meta->{file};
 		return $self->_render;
 
 	}
-	#say "Normal render of:".$self->meta->{file};
 	Log::OK::TRACE and log_trace "Plexsite: render :".$self->meta->{file}." flag: ".($top_down//"");
 	#From here is a normal render call on this template
 
@@ -221,7 +218,6 @@ sub render {
 
 		#now call render on self. This renders non hierarchial templates
 		Log::OK::TRACE and log_trace "Plexsite: render. rendering body and sub templates";
-		#my $total=$self->SUPER::render($fields); #Call down the chain with top_down flag
 		my $total=$self->_render($fields); #Call down the chain with top_down flag
 		$self->[default_result_]="";	#Clear
 		return $total;
@@ -229,7 +225,6 @@ sub render {
 	elsif($top_down){
 
 		Log::OK::TRACE and log_trace "Plexsite: render: top down call";
-		#$self->SUPER::render($fields, $top_down);
 		$self->_render($fields, $top_down);
 
 	}

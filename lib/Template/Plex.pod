@@ -274,6 +274,18 @@ See C<include> for more details
 This doesn't impact recursive calls to C<plex> or C<plx> when dynamically/conditionally
 loading templates.
 
+=item C<no_init_fix>
+
+Disables correcting missing init blocks.
+
+If not specified or false, a template file is scanned for a C<@{[init{..}]}
+directive. If one is found, the template is not modified. Otherwise, a 'null'
+block is added at the beginning of the template.
+
+The added block is not effected by the enabling/disabling of block fix
+mechanism.
+
+
 =item B<no_block_fix>
 
 Disables removing of EOL after a C<@{[]}> when  the closing C<}]> starts on a

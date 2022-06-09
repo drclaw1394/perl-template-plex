@@ -27,6 +27,7 @@ our @EXPORT = qw(
 );
 
 my $Include=qr|\@\{\s*\[\s*include\s*\(\s*(.*?)\s*\)\s*\] \s* \}|x;
+my $Init=qr|\@\{\s*\[\s*init\s*\{(?:.*?)\}\s*\] \s* \}|smx;
 
 
 sub new;	#forward declare new;
@@ -204,6 +205,17 @@ sub _block_fix {
 
 }
 
+sub _init_fix{
+	\my $buffer=\$_[0];
+	#Look for an init block
+	#unless($buffer=~/\@\[\{\s*init\s*\{
+	unless($buffer=~$Init){
+		carp "Template::Plex no init block detected. Adding dummy";
+		$buffer="\@{[init{}]}".$buffer;
+	}
+
+}
+
 my $prepare=\&_prepare_template;
 
 #load a template to be rendered later.
@@ -286,6 +298,7 @@ sub new{
 	_subst_inject($data, root=>$root) unless $options{no_include};
 	#Perform suppurfluous EOL removal
 	_block_fix($data) unless $options{no_block_fix};
+	_init_fix($data) unless $options{no_init_fix};
 	if($args){
 		#Only call this from top level call
 		#Returns the render sub
