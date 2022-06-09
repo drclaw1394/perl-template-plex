@@ -1,6 +1,16 @@
 use strict;
 use warnings;
 
+#############################################
+# use Log::ger;                             #
+# use Log::ger::Output "Screen";            #
+#                                           #
+# use Log::OK {opt=>"verbose"};             #
+# use Log::ger::Util;                       #
+# Log::ger::Util::set_level Log::OK::LEVEL; #
+#############################################
+
+
 use Test::More tests => 17;
 use Data::Dumper;
 
@@ -11,8 +21,7 @@ use Template::Plex;
 
 my $default_data={data=>[1,2,3,4]};
 
-my $template=q|@{[init { }]}
-@{[
+my $template=q|@{[
 	do {
 		#my $sub='Sub template: $data->@*';
 		my $s="";
@@ -32,8 +41,6 @@ for(1,2,3,4){
 	$expected.="row $_\n";
 }
 ok $result eq $expected, "Base values";
-
-
 
 
 

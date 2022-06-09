@@ -253,10 +253,12 @@ sub new{
 		local $/=undef;
 		if(ref($path) eq "GLOB"){
 			#file handle
+			$options{file}="$path";
 			<$path>;
 		}
 		elsif(ref($path) eq "ARRAY"){
 			#process as inline template
+			$options{file}="$path";
 			join "", @$path;
 		}
 		else{

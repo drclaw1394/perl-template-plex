@@ -93,8 +93,8 @@ sub _setup {
 	
 	#Check if an init block was used
 	unless($self->[init_done_flag_]){
-		Log::OK::WARN and log_warn "Template::Plex::Base Not init block used in". $self->meta->{file};
-		#$self->[init_done_flag_]=1;
+		Log::OK::WARN and log_warn "Template::Plex::Base ignoring no \@{[init{...}]} block in template from ". $self->meta->{file};
+		$self->[init_done_flag_]=1;
 	}
 }
 
