@@ -8,10 +8,11 @@ no warnings "experimental";
 use Log::ger;
 use Log::OK;
 
+use Data::Dumper;
 
 use Symbol qw<delete_package>;
 
-#use Template::Plex;
+#use Template::Plex::Internal;
 use constant KEY_OFFSET=>0;
 use enum ("plex_=0",qw<meta_ args_ sub_ package_ init_done_flag_ skip_
 
@@ -36,18 +37,19 @@ sub get_cache {
 #Returns a template loaded and intialised
 sub load {
                 my ($self, $path, $vars, %opts)=@_;
-		Log::OK::TRACE and log_trace __PACKAGE__." load called for $path";
 		my $template;
 		if(ref($self)){
+			Log::OK::TRACE and log_trace __PACKAGE__." instance load called for $path";
 			\my %fields=$self->args;
 
 			my %options=$self->meta->%{qw<root use base>}; #copy
-			$template=Template::Plex->new(\&Template::Plex::_prepare_template, $path, $vars?$vars:\%fields, %opts?%opts:%options);
+			$template=Template::Plex::Internal->new(\&Template::Plex::Internal::_prepare_template, $path, $vars?$vars:\%fields, %opts?%opts:%options);
 
 		}
 		else{
+			Log::OK::TRACE and log_trace __PACKAGE__." class load called for $path";
 			#called on package
-			$template=Template::Plex->new(\&Template::Plex::_prepare_template, $path, $vars, %opts);
+			$template=Template::Plex::Internal->new(\&Template::Plex::Internal::_prepare_template, $path, $vars, %opts);
 
 		}
 			$template->setup;
@@ -59,7 +61,7 @@ sub cache {
 		my ($self, $id, $path, $vars, %opts)=@_;
 
 		Log::OK::TRACE and log_trace __PACKAGE__." cache: $path";
-		#my $id=$path.join "", caller;
+		$id//=$path.join "", caller;	#Set if undefined
 		if(ref($self)){
 			$self->[cache_]{$id} and return $self->[cache_]{$id};
 
@@ -75,7 +77,15 @@ sub cache {
 		}
 }
 sub immediate {
+		my ($self, $id, $path, $vars, @opts)=@_;
+
+		Log::OK::TRACE and log_trace __PACKAGE__." cache: $path";
+		$id//=$path.join "", caller;	#Set if undefined
 	
+		my $template=$self->cache($id, $path, $vars,@opts);
+		return $template->render if $template;
+		"";
+
 }
 
 sub _plex_ {

@@ -4,6 +4,7 @@ use warnings;
 
 use version; our $VERSION = version->declare('v0.4.0');
 use Template::Plex;
+use List::Util qw<min max>;
 
 #use Symbol qw<delete_package>;
 use Carp qw<carp croak>;
@@ -22,9 +23,6 @@ use Exporter 'import';
 our @EXPORT_OK = qw<plex plx block pl plex_clear jmap>;# @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
-	load
-	cache
-	immediate
 	plex
 	plx
 );
@@ -58,7 +56,7 @@ sub  bootstrap{
 	\my %fields=$href;
 
 my $out="package $opts{package} {
-use Template::Plex qw<pl block jmap>;
+use Template::Plex::Internal qw<pl block jmap>;
 ";
 
 $out.='my $self=$plex;
@@ -82,7 +80,7 @@ $out.='
 		\my %fields=$href;
 
 
-                my $template=Template::Plex->new(\&Template::Plex::_prepare_template, $path, $vars?$vars:\%fields, %opts?%opts:%options);
+                my $template=Template::Plex::Internal->new(\&Template::Plex::Internal_prepare_template, $path, $vars?$vars:\%fields, %opts?%opts:%options);
 
 		$template->setup;
 		$template;
@@ -128,19 +126,19 @@ $out.='
 	}
 
 	sub cache {
+		my ($id, $path, $var, @opts)=@_;
 		#we want to cache based on the caller
-		my $id=$path.join "", caller;
-		unshift @_, $id;
+		$id=$path.join "", caller;
+		#unshift @_, $id;
 			
-		$self->cache(@_);
+		$self->cache($id,$path, $var,@opts);
 	}
 
 	sub immediate {
+		my ($id, $path, $var, @opts)=@_;
 		#we want to cache based on the caller
-		my $id=$path.join "", caller;
-		unshift @_, $id;
-
-		my $template=$self->cache(@_);
+		$id=$path.join "", caller;
+		my $template=$self->cache($id, $path,$var, @opts);
 		if($template){
 			return $template->render;
 		}
@@ -157,7 +155,13 @@ $out.='
 		\\my %fields=shift//\\%fields;
 
 
-		return $self->prefix.qq{'.$_data_.'}.$self->postfix;
+		##__START
+return $self->prefix.
+qq
+{'.
+$_data_ 
+. '}
+.$self->postfix;
 
 		_PLEX_SKIP:
 		"";
@@ -185,11 +189,31 @@ sub _prepare_template{
 	$plex->[Template::Plex::meta_]=\%opts;
 	$plex->[Template::Plex::args_]=$href;
 
- 	my $ref=eval &Template::Plex::bootstrap;
+	my $prog=&Template::Plex::Internal::bootstrap;
+ 	my $ref=eval $prog;
 	if($@ and !$ref){
-		print STDERR "Error in $opts{file}";
-		print  STDERR "EVAL: ",$@;
-		print  STDERR "EVAL: ",$!;
+		print STDERR "Error in $opts{file}:","\n";
+		my $error=$@;
+
+		my $line=1;
+		my $start;
+		#my @lines=map { $start= $line if /##__START/;$line++ . $_."\n"; } split "\n", $prog;
+		my @lines=map { $start = $line if /##__START/; $line++;$_."\n" } split "\n", $prog;
+		$start+=2;
+		my @error_lines;
+
+		$error=~s/line (\d+)/do{push @error_lines, $1;"line ".($1-$start)}/eg;
+		say $error;
+		my $min=min @error_lines;
+		my $max=max @error_lines;
+		$min-=5; $min=$start if $min<$start;
+		$max+=5; $max=$#lines-7 if $max>($#lines-7);
+		my $counter=$min-$start+1;
+		for ($min..$max){
+			
+			print $counter++."  ".$lines[$_];
+		}
+
 	}
 	$plex->[Template::Plex::sub_]=$ref;
 	$plex;
@@ -248,7 +272,7 @@ sub _init_fix{
 	#Look for an init block
 	#unless($buffer=~/\@\[\{\s*init\s*\{
 	unless($buffer=~$Init){
-		carp "Template::Plex no init block detected. Adding dummy";
+		carp __PACKAGE__." no init block detected. Adding dummy";
 		$buffer="\@{[init{}]}".$buffer;
 	}
 
@@ -261,7 +285,7 @@ my $prepare=\&_prepare_template;
 sub plex{
 	my ($path,$vars,%opts)=@_;
 	#unshift @_, $prepare;	#push current top level scope
-	my $template=Template::Plex->new($prepare,$path,$vars,%opts);
+	my $template=Template::Plex::Internal->new($prepare,$path,$vars,%opts);
 
 	$template->setup;
 	$template;
@@ -279,19 +303,8 @@ sub plx {
 	#$template->setup;
 	$template->render;
 }
-sub load {
-	shift;
-	Template::Plex->load(@_);
-}
-sub cache{
-	shift;
-	Template::Plex->cache(@_);
-}
 
-sub immediate {
-	my $template=&cache;
-	$template->render;
-}
+
 
 
 sub plex_clear {
@@ -360,8 +373,6 @@ sub new{
 		state $package=0;
 		$package++;
 		$options{package}="Template::Plex::temp".$package; #force a unique package if non specified
-		#$options{self}//=$plex;
-		#$options{args}//=$args;
 		$prepare->($plex, $data, $args, %options);	#Prepare in the correct scope
 	}
 	else {
