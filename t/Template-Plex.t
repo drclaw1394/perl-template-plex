@@ -33,7 +33,7 @@ my $template=q|@{[
 ]}|;
 
 
-$template=plex [$template], $default_data;
+$template=Template::Plex->load([$template], $default_data);
 $template->setup;
 my $result=$template->render();
 my $expected="";
@@ -76,7 +76,7 @@ $template=q|@{[init {}]}
 ]}|;
 
 $default_data={data=>[1,2,3,4]};
-$template=plex [$template], $default_data;
+$template=Template::Plex->load([$template], $default_data);
 $template->setup;
 $result=$template->render($override_data);
 $expected="";
@@ -90,7 +90,7 @@ $template=q|@{[init {}]}my name is $name not $fields{name}|;
 $default_data={name=>"John"};
 $override_data={name=>"Jill"};
 
-$template=plex [$template], $default_data;
+$template=Template::Plex->load([$template], $default_data);
 $template->setup;
 $result=$template->render($override_data);
 $expected="";
@@ -100,9 +100,9 @@ ok $result eq "my name is John not Jill", "Lexical and override access";
 
 
 {
-	my $top_level='@{[init{}]}top level template recursively using another:@{[plx "sub1.plex"]}';
+	my $top_level='@{[init{}]}top level template recursively using another:@{[cache "sub1.plex"]}';
 
-	my $t=plex [$top_level], {}, root=> "t";
+	my $t=Template::Plex->load([$top_level], {}, root=> "t");
 	$t->setup;
 	my $text=$t->render;
 	my($first,$last)=split ":", $text;
@@ -110,9 +110,9 @@ ok $result eq "my name is John not Jill", "Lexical and override access";
 }
 
 {
-	my $top_level='@{[init{}]}top level template recursively using another:@{[plx "sub2.plex"]}';
+	my $top_level='@{[init{}]}top level template recursively using another:@{[cache "sub2.plex"]}';
 	my %vars=(value=>10,user=>{});
-	my $t=plex [$top_level], \%vars, root=> "t";
+	my $t=Template::Plex->load([$top_level], \%vars, root=> "t");
 	$t->setup;
 	my $text=$t->render;
 	my($first,$last)=split ":", $text;
@@ -129,15 +129,15 @@ ok $result eq "my name is John not Jill", "Lexical and override access";
 	my %vars=(value=>10);
 	for(10,20){
 		$vars{value}=$_;
-		my $output= plx [$top_level], \%vars;
+		my $output= cache [$top_level], \%vars;
 		ok $output =~ /$_/, "plx rendering ok";
 	}
 }
 
 {
-	my $top_level='@{[init{}]}skipped:@{[plx "sub3.plex"]}';
+	my $top_level='@{[init{}]}skipped:@{[cache "sub3.plex"]}';
 	my %vars=(value=>10);
-	my $t=plex [$top_level], \%vars, root=> "t";
+	my $t=Template::Plex->load([$top_level], \%vars, root=> "t");
 	$t->setup;
 
 	my $text=$t->render;
@@ -147,7 +147,7 @@ ok $result eq "my name is John not Jill", "Lexical and override access";
 {
 	#Testing base class
 	my %vars;
-	my $result=plx ['@{[init{}]}@{[$self->__internal_test_proxy__]}'], \%vars;
+	my $result=Template::Plex->immediate(['@{[init{}]}@{[$self->__internal_test_proxy__]}'], \%vars);
 
 	#print  "TESTING BASE: ".$result; exit;
 
@@ -164,7 +164,7 @@ ok $result eq "my name is John not Jill", "Lexical and override access";
 		}
 	}
 	my %vars;
-	my $result=plx ['@{[$plex->__internal_test_proxy__]}'], \%vars, base=>"My::Base";
+	my $result= cache ['@{[$plex->__internal_test_proxy__]}'], \%vars, base=>"My::Base";
 
 	ok $result eq "OVERRIDE", "Subclass methods";
 
@@ -180,7 +180,7 @@ ok $result eq "my name is John not Jill", "Lexical and override access";
 	];
 
 	my %vars;
-	my $template=plex $tt, \%vars;
+	my $template=Template::Plex->load($tt, \%vars);
 	my $setup=$template->setup;
 	ok $setup eq "", "Setup without render";
 	ok $vars{test} eq "testing", "Setup without render";

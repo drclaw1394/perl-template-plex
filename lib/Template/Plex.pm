@@ -1,339 +1,287 @@
 package Template::Plex;
+
 use strict;
 use warnings;
 
-use version; our $VERSION = version->declare('v0.4.0');
-use Template::Plex::Base;
-
-#use Symbol qw<delete_package>;
-use Carp qw<carp croak>;
-
-use feature qw<say state refaliasing lexical_subs>;
+use feature qw<say isa refaliasing>;
 no warnings "experimental";
-
-#use File::Basename qw<dirname basename>;
-use File::Spec::Functions qw<catfile>;
-use File::Basename qw<dirname>;
-use Exporter 'import';
+use Log::ger;
+use Log::OK;
 
 
-#our %EXPORT_TAGS = ( 'all' => [ qw( plex plx  block pl plex_clear jmap) ] );
+use Symbol qw<delete_package>;
 
-our @EXPORT_OK = qw<plex plx block pl plex_clear jmap>;# @{ $EXPORT_TAGS{'all'} } );
+#use Template::Plex;
+use constant KEY_OFFSET=>0;
+use enum ("plex_=0",qw<meta_ args_ sub_ package_ init_done_flag_ skip_
 
-our @EXPORT = qw(
-	plex
-	plx
-);
+	cache_
+	slots_ parent_ default_result_
+	>);
 
-my $Include=qr|\@\{\s*\[\s*include\s*\(\s*(.*?)\s*\)\s*\] \s* \}|x;
-my $Init=qr|\@\{\s*\[\s*init\s*\{(?:.*?)\}\s*\] \s* \}|smx;
+use constant KEY_COUNT=>default_result_ - plex_ +1;
 
-
-sub new;	#forward declare new;
-
-sub lexical{
-	my $href=shift;
-	die "NEED A HASH REF " unless  ref $href eq "HASH" or !defined $href;
-	$href//={};
-	\my %fields=$href;
-
-	my $string="";
-	for my $k (keys %fields){
-		$string.= "\\my \$$k=\\\$fields{$k};\n";
-	}
-	$string;
+our %top_level_cache;
+sub new {
+	my ($package, $plex)=@_;
+	my $self=[];
+	$self->[plex_]=$plex;
+	$self->[cache_]={};
+	bless $self, $package;
+}
+sub get_cache {
+	$_[0][cache_];
 }
 
-sub  bootstrap{
-	my $plex=shift;
-	\my $_data_=\shift;
-	my $href=shift;
-	my %opts=@_;
+#Returns a template loaded and intialised
+sub load {
+                my ($self, $path, $vars, %opts)=@_;
+		Log::OK::TRACE and log_trace __PACKAGE__." load called for $path";
+		my $template;
+		if(ref($self)){
+			\my %fields=$self->args;
 
-	$href//={};
-	\my %fields=$href;
+			my %options=$self->meta->%{qw<root use base>}; #copy
+			$template=Template::Plex->new(\&Template::Plex::_prepare_template, $path, $vars?$vars:\%fields, %opts?%opts:%options);
 
-my $out="package $opts{package} {
-use Template::Plex qw<pl block plex_clear jmap>;
-";
-
-$out.='my $self=$plex;
-';
-
-$out.= '	\my %fields=$href;
-';
-$out.='		my %options=%opts; 
-' if keys %opts;
-                for($opts{use}->@*){
-			$out.="use $_;\n";
-                }
-
-$out.=lexical($href) unless $opts{no_alias};		#add aliased variables	from hash
-$out.='
-	my %cache;	#Stores code refs using caller as keys
-
-	#lexical plex changes the prepare and also reuses options with out making it explicit
-        my sub plex{
-                my ($path, $vars, %opts)=@_;
-		\my %fields=$href;
-
-
-                my $template=Template::Plex->new(\&Template::Plex::_prepare_template, $path, $vars?$vars:\%fields, %opts?%opts:%options);
-
-		$template->setup;
-		$template;
-        }
-	my sub plex_clear {
-		%cache=();
-	}
-        my sub skip{
-		goto _PLEX_SKIP;
-        }
-
-
-	$plex->[Template::Plex::Base::skip_]=\&skip;
-
-	my sub plx {
-		my ($path,$vars,%opts)=@_;
-
-		my $id=$path.join "", caller;
-		$cache{$id} and return $cache{$id}->render;
-		
-		my $template=&plex;
-		$cache{$id}//=$template;
-		#$template->setup;
-		$template->render;
-	}
-
-	my sub init :prototype(&){
-		$self->_init(@_);
-	}
-
-	sub slot {
-		$self->slot(@_);
-	}
-	sub fill_slot {
-		$self->fill_slot(@_);
-	}
-	sub inherit {
-		$self->inherit(@_);
-	}
-
-	sub {
-		no warnings \'uninitialized\';
-		no strict;
-		#my $plex=shift;
-		my $self=shift;
-
-		\\my %fields=shift//\\%fields;
-
-
-		return qq{'.$_data_.'};
-
-		_PLEX_SKIP:
-		"";
-
-	}
-};';
-
-#my $line=0;
-#say map { $line++ . $_."\n"; } split "\n", $out;
-#$out;
-};
-
-# First argument the template string/text. This is any valid perl code
-# Second argument is a hash ref to default or base level fields
-# returns a code reference which when called renders the template with the values
-sub _prepare_template{
-	my ($plex, undef, $href, %opts)=@_;
-	$href//={};
-	\my %fields=$href;
-	\my %meta=\%opts;
-
-	#$plex now variable is now of base class
-	$plex=($opts{base}//"Template::Plex::Base")->new($plex);
-
-	$plex->[Template::Plex::Base::meta_]=\%opts;
-	$plex->[Template::Plex::Base::args_]=$href;
-
- 	my $ref=eval &Template::Plex::bootstrap;
-	if($@ and !$ref){
-		print STDERR "Error in $opts{file}";
-		print  STDERR "EVAL: ",$@;
-		print  STDERR "EVAL: ",$!;
-	}
-	$plex->[Template::Plex::Base::sub_]=$ref;
-	$plex;
-}
-
-
-
-
-
-#a little helper to allow 'including' templates into each other
-sub _munge {
-	my ($input, %options)=@_;
-
-	#test for literals
-	my $path;	
-	if($input =~ /^"(.*)"$/){
-		#literal		
-		$path=$1;	
-	}
-	elsif($input =~ /^'(.*)'$/){
-		#literal		
-		$path=$1;	
-	}
-	else {
-		#not supported?
-		#
-	}
-
-	plex($path,"",%options);
-}
-
-sub _subst_inject {
-	\my $buffer=\(shift);
-	while($buffer=~s|$Include|_munge($1, @_)|e){
-		#TODO: Possible point for diagnostics?
-	};
-}
-
-sub _block_fix {
-	#remove any new line immediately after a ]} pair
-	\my $buffer=\(shift);
-	#$buffer=~s/^\]\}$/]}/gms;
-	
-	$buffer=~s/^(\@\{\[.*?\]\})\n/$1/gms;
-        ##############################################
-        # while($buffer=~s/^\]\}\n/]}/gs){           #
-        # }                                          #
-        # while($buffer=~s/^(@\{\[.*?\]\})\n/$1/gs){ #
-        # }                                          #
-        ##############################################
-
-}
-
-sub _init_fix{
-	\my $buffer=\$_[0];
-	#Look for an init block
-	#unless($buffer=~/\@\[\{\s*init\s*\{
-	unless($buffer=~$Init){
-		carp "Template::Plex no init block detected. Adding dummy";
-		$buffer="\@{[init{}]}".$buffer;
-	}
-
-}
-
-my $prepare=\&_prepare_template;
-
-#load a template to be rendered later.
-# Compiled once but usable multiple times
-sub plex{
-	my ($path,$vars,%opts)=@_;
-	#unshift @_, $prepare;	#push current top level scope
-	my $template=Template::Plex->new($prepare,$path,$vars,%opts);
-
-	$template->setup;
-	$template;
-}
-
-my %cache; #toplevel cache
-#Load template and render in one call. Easy for on offs
-sub plx {
-	my ($path,$vars,%opts)=@_;
-	my $id=$path.join "", caller;
-	$cache{$id} and "exisiting !" and return $cache{$id}->render;
-	my $template=&plex;
-	$cache{$id}//=$template;
-	#$template->setup;
-	$template->render;
-}
-
-sub plex_clear {
-	%cache=();
-}
-
-
-sub block :prototype(&) {
-	$_[0]->();
-	return "";
-}
-*pl=\*block;
-
-
-
-sub new{
-	my $plex=bless [], shift;
-	my ($prepare, $path, $args, %options)=@_;
-	my $root=$options{root};
-	#croak "plex: even number of arguments required" if (@_-1)%2;
-	croak "plex: first argument must be defined" unless defined $path;
-	#croak "plex: at least 2 arguments needed" if ((@_-1) < 2);
-
-	my $data=do {
-		local $/=undef;
-		if(ref($path) eq "GLOB"){
-			#file handle
-			$options{file}="$path";
-			<$path>;
-		}
-		elsif(ref($path) eq "ARRAY"){
-			#process as inline template
-			$options{file}="$path";
-			join "", @$path;
 		}
 		else{
-			#Assume a path
-			#Prepend the root if present
-			$options{file}=$path;
-			$path=catfile $root, $path if $root;
-			my $fh;
-			if(open $fh, "<", $path){
-				<$fh> 
-			}
-			else {
-				carp "Could not open file: $path $!";
-				"";
-			}
-
+			#called on package
+			$template=Template::Plex->new(\&Template::Plex::_prepare_template, $path, $vars, %opts);
 
 		}
-	};
+			$template->setup;
+			$template;
+}
 
-	$args//={};		#set to empty hash if not defined
+#Returns a template which was already loaded can called from the callers position
+sub cache {
+		my ($self, $id, $path, $vars, %opts)=@_;
+
+		Log::OK::TRACE and log_trace __PACKAGE__." cache: $path";
+		#my $id=$path.join "", caller;
+		if(ref($self)){
+			$self->[cache_]{$id} and return $self->[cache_]{$id};
+
+			my $template=$self->load($path, $vars,%opts);
+			$self->[cache_]{$id}//=$template;
+		}
+		else{
+			$top_level_cache{$id} and return $top_level_cache{$id};
+
+			my $template=$self->load($path, $vars,%opts);
+			$top_level_cache{$id}//=$template;
+
+		}
+}
+sub immediate {
 	
-	chomp $data;
-	#Perform inject substitution
-	_subst_inject($data, root=>$root) unless $options{no_include};
-	#Perform suppurfluous EOL removal
-	_block_fix($data) unless $options{no_block_fix};
-	_init_fix($data) unless $options{no_init_fix};
-	if($args){
-		#Only call this from top level call
-		#Returns the render sub
+}
 
-		state $package=0;
-		$package++;
-		$options{package}="Template::Plex::temp".$package; #force a unique package if non specified
-		#$options{self}//=$plex;
-		#$options{args}//=$args;
-		$prepare->($plex, $data, $args, %options);	#Prepare in the correct scope
+sub _plex_ {
+	$_[0][Template::Plex::plex_];
+}
+
+sub meta :lvalue { $_[0][Template::Plex::meta_]; }
+
+sub args :lvalue{ $_[0][Template::Plex::args_]; }
+
+sub init_done_flag:lvalue{ $_[0][Template::Plex::init_done_flag_]; }
+
+
+sub _render {
+	#sub in plex requires self as first argument
+	return $_[0][sub_](@_);
+}
+
+sub skip {
+	Log::OK::DEBUG and log_debug("Template::Plex: Skipping Template: ".$_[0]->meta->{file});
+	$_[0]->[skip_]->();
+}
+
+#A call to this method will run the sub an preparation
+#and immediately stop rendering the template
+sub _init {
+	my ($self, $sub)=@_;
+	
+	return if $self->[init_done_flag_];
+	Log::OK::DEBUG and log_debug("Template::Plex: Initalising Template: ".$self->meta->{file});
+	unless($self isa Template::Plex){
+	#if($self->[meta_]{package} ne caller){
+		Log::OK::ERROR and log_error("Template::Plex: init must only be called within a template: ".$self->meta->{file});
+		return;
+	}
+
+	$self->pre_init;
+	$sub->();
+	$self->post_init;
+
+	$self->[init_done_flag_]=1;
+	$self->skip;
+	"";		#Must return an empty string
+}
+
+sub pre_init {
+
+}
+
+sub post_init {
+
+}
+sub prefix {
+}
+sub postfix {
+}
+
+#Execute the template in setup mode
+sub setup {
+	my $self=shift;
+	#Test that the caller is not the template package
+	Log::OK::DEBUG and log_debug("Template::Plex: Setup Template: ".$self->meta->{file});
+	if($self->[meta_]{package} eq caller){
+		#Log::OK::ERROR and log_error("Template::Plex: setup must only be called outside a template: ".$self->meta->{file});
+		#		return;
+	}
+	$self->[init_done_flag_]=undef;
+	$self->render(@_);
+	
+	#Check if an init block was used
+	unless($self->[init_done_flag_]){
+		Log::OK::WARN and log_warn "Template::Plex ignoring no \@{[init{...}]} block in template from ". $self->meta->{file};
+		$self->[init_done_flag_]=1;
+	}
+	"";
+}
+
+# Slotting and Inheritance
+#
+#
+
+#Marks a slot in a parent template.
+#A child template can fill this out by calling fill_slot on the parent
+sub slot {
+	my ($self, $slot_name, $default_value)=@_;
+	$slot_name//="default";	#If no name assume default
+
+	Log::OK::TRACE and log_trace __PACKAGE__.": Template called slot: $slot_name";
+	my $data=$self->[slots_]{$slot_name};
+	my $output="";
+	
+	$data//=$default_value;
+	if($data isa Template::Plex){
+		#render template
+		if($slot_name eq "default"){
+			Log::OK::TRACE and log_trace __PACKAGE__.": copy default slot";
+			$output.=$self->[default_result_]//"";
+		}
+		else {
+			Log::OK::TRACE and log_trace __PACKAGE__.": render non default template slot";
+			$output.=$data->render;
+		}
 	}
 	else {
-		$data;
+		Log::OK::TRACE and log_trace __PACKAGE__.": render non template slot";
+		#otherwise treat as text
+		$output.=$data//"";
+	}
+	$output
+}
+
+sub fill_slot {
+	my ($self)=shift;
+	my $parent=$self->[parent_];
+	unless($parent){
+		Log::OK::WARN and log_warn __PACKAGE__.": No parent setup for: ". $self->meta->{file};
+		return;
+	}
+
+	unless(@_){
+		#An unnamed fill spec implies the default slot
+		$parent->[slots_]{default}=$self;
+	}
+	else{
+		for my ($k,$v)(@_){
+			$parent->[slots_]{$k}=$v;
+		}
+	}
+	"";
+}
+
+
+sub inherit {
+	my ($self, $path)=@_;
+	Log::OK::DEBUG and log_debug __PACKAGE__.": Inherit: $path";
+	#If any parent variables have be setup load the parent template
+
+	#Setup the parent. Cached  with path
+	my $p=$self->load($path, $self->args, $self->meta->%*);
+	$p->[slots_]={};
+
+	#Add this template to the default slot
+	$p->[slots_]{default}=$self;
+	$self->[parent_]=$p;
+}
+
+sub render {
+	my ($self, $fields, $top_down)=@_;
+	#We don't call parent render if we are uninitialised
+
+
+	
+	#If the template uninitialized, we just do a first pass
+	unless($self->init_done_flag){
+
+		return $self->_render;
+
+	}
+
+	Log::OK::TRACE and log_trace __PACKAGE__.": render :".$self->meta->{file}." flag: ".($top_down//"");
+
+	#locate the 'top level' template and  call downwards
+	my $p=$self;
+	if(!$top_down){
+		while($p->[parent_]){
+			$p=$p->[parent_];
+		}
+		$p->render($fields,1);
+	}
+	else{
+		#This is Normal template or top of hierarchy
+		#child has called parent and parent is the top
+		#
+		#Turn it around and call back down the chain
+		#
+
+		Log::OK::TRACE and log_trace __PACKAGE__.": render: no parent bottom up. assume normal render";
+		#Check slots. Slots indicate we need to call the child first
+		if($self->[slots_] and $self->[slots_]->%*){
+			Log::OK::TRACE and log_trace __PACKAGE__.": render: rendering default slot";
+			$self->[default_result_]=$self->[slots_]{default}->render($fields,1);
+		}
+
+		#now call render on self. This renders non hierarchial templates
+		Log::OK::TRACE and log_trace __PACKAGE__.": render: rendering body and sub templates";
+		my $total=$self->_render($fields); #Call down the chain with top_down flag
+		$self->[default_result_]="";	#Clear
+		return $total;
 	}
 }
 
+sub parent {$_[0][parent_];}
 
-#Join map
-sub jmap :prototype(&$@){
-	my ($sub,$delimiter)=(shift,shift);	#block is first
-	$delimiter//="";	#delimiter is whats left
-	join $delimiter, map &$sub, @_;
+
+
+
+
+
+
+sub DESTROY {
+	delete_package $_[0][package_] if $_[0][package_];
 }
 
-
+#Internal testing use only
+sub __internal_test_proxy__ {
+	"PROXY";
+}
 
 1;
