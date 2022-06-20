@@ -128,7 +128,7 @@ ok $result eq "my name is John not Jill", "Lexical and override access";
         for(10,20){
                 $vars{value}=$_;
                 my $output= Template::Plex->immediate(undef, [$top_level], \%vars);
-                ok $output =~ /$_/, "plx rendering ok";
+                ok $output =~ /$_/, "immediate rendering ok";
         }
 }
 
@@ -189,14 +189,33 @@ ok $result eq "my name is John not Jill", "Lexical and override access";
         #Debugging and error reporting
         #
         my $top=[
-'a template  with a n
-intentional
-error on line 4
+'
+okasd
+asd
+fasdf
+asdf
+sadf
+asd
+sad
+asd
+asd
+asdf
+d2e
+df
 @{[init {
-#sdf=
+##sdf="asdf";
 }
 ]}
-asdf'
+a template  with a n
+intentional
+error on line 4
+asdf
+asdf
+asdf
+asdf2323
+sd23
+df
+'
 ];
         my $result=Template::Plex->load($top, undef);
 }

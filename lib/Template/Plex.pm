@@ -59,7 +59,6 @@ sub load {
 #Returns a template which was already loaded can called from the callers position
 sub cache {
 		my ($self, $id, $path, $vars, %opts)=@_;
-
 		Log::OK::TRACE and log_trace __PACKAGE__." cache: $path";
 		$id//=$path.join "", caller;	#Set if undefined
 		if(ref($self)){
@@ -81,7 +80,7 @@ sub immediate {
 
 		Log::OK::TRACE and log_trace __PACKAGE__." cache: $path";
 		$id//=$path.join "", caller;	#Set if undefined
-	
+		
 		my $template=$self->cache($id, $path, $vars,@opts);
 		return $template->render if $template;
 		"";
