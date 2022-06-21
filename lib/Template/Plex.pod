@@ -1,6 +1,6 @@
 =head1 NAME
 
-Template::Plex - (P)erl (L)exical and (EX)tentable Templating
+Template::Plex - (P)erl (L)exical and (EX)tendable Templating
 
 =head1 SYNOPSIS
 
@@ -19,7 +19,6 @@ Write a template:
 	myself.  That averages @{[$slices/(@$people+1)]} slices each.
 
 Use a template
-
 	use Template::Plex;
 
 	my $vars={
@@ -28,9 +27,9 @@ Use a template
 		people=>[qw<Kim Sam Harry Sally>]
 	};
 
-	my $template= Template::Plex->load "my_template.plex", \%vars;
+	my $template= Template::Plex->load(\*DATA, $vars);
 
-	my $output=$template->render;	
+	print $template->render;	
 
 
 	#OUTPUT
@@ -40,11 +39,11 @@ Use a template
 	
 
 Change values and render it again:
-
 	$vars->{size}="extra large";
 	$vars->{slices}=12;
-	
-	$output=$template->render;
+
+	print $template->render;
+
 
 	#OUTPUT
 	Dear Mr. Connery,
@@ -55,8 +54,8 @@ Change values and render it again:
 =head1 DESCRIPTION
 
 C<Template::Plex> facilitates the use of perl (not embedded perl) as a template
-language. It implements required bootstrapping and a system to load, cache,
-inherit and render templates with minimal setup or typing.
+language. It implements bootstrapping and a system to load, cache,
+inherit and render templates with minimal code.
 
 The 'lexical' part of this module refers to the lexical aliasing of input
 variables into the template. This reduces the amount of markup required to
@@ -65,9 +64,6 @@ reference variables and thus improves the style and readability of a template.
 Templates can be extended and reused by way of inheritance and slots. The
 template system itself can be extended by sub classing C<Template::Plex> and
 implementing customised load routines and other  helper methods
-
-The document covers the main API and concepts. For more detailed usage please
-consult the C<Template::Plex::Manual>
 
 =head1 MOTIATION
 
@@ -80,108 +76,6 @@ Lexical aliasing allows the input variables to be accessed directly by name
 C<E<lt>%=name%E<gt>>)
 
 
-=head1 FEATURE CHEAT SHEET
-
-=over
-
-=item * Templates can contain a initialisation state
-
-	@{[
-		init {
-			# Nomral perl code here will only execute once
-			# when templates is loaded
-		}
-	]}
-
-
-=item * Templates can cache at caller location
-
-	Sub/template is loaded only the first time in this map/loop
-
-	@{[map {immediate undef, "path_to_template",{}} qw< a b c d e >]}
-	
-	And rendereds serveral times
-		
-
-=item * Lexical and package variables accessed/created within templates
-
-	@{[
-		init {
-			$input_var//=1; #set default
-		}
-
-	}]
-	
-	Value is $input_var;
-
-=item * Call and create subroutines within templates:
-
-	@{[
-		init {
-			sub my_great_calc {
-				my $input=shift;
-				$input*2/5;
-			}
-		}
-
-	}]
-
-	Result of calculation: @{[my_great_calc(12)]}
-
-=item * 'Include' Templates within templates easily:
-	
-	@{[include("path_to_file")]}
-
-=item * Recursive sub template loading
-	
-	@{[load "path_to_sub_template"]}
-
-=item * Conditional rendering
-
-	@{[ $flag and $var]}
-
-	@{[ $flag?$var:""]}
-	
-	@{[
-		pl {
-			if($flag){
-				#do stuff	
-			}
-		}
-	]}
-
-=item * Lists/Loops/maps
-	
-	template interpolates @$lists directly
-	
-	Items that are ok:
-	 @{[
-	 	do {
-			#Standard for loop
-			my $output;
-			for(@$items){
-				$output.=$_."\n" if /ok/;
-			}
-			$output;
-		}
-	}]
-
-	More ok items:
-	@{[map {/ok/?"$_\n":()} @$items]}
-
-	
-
-=item * C<use> other modules directly in templates:
-
-	@{[
-		init {	
-			use Time::HiRes qw<time>
-		}
-	]}
-
-	Time of day right now: @{[time]}
-
-=back
 
 =head1 SYNTAX GENESIS
 
@@ -236,10 +130,10 @@ operators.
 Each template has access to it's self, using the C<$self> variable. This comes in very handy when loading sub templates
 
 
-Tempaltes can include an C<init{}> block at the begining which executed (only
+Templates can include an C<init{}> block at the beginning which executed (only
 once) during the setup state of the template.  In some ways this is similar to
-Jeckyll 'Front Matter', but much more powerful. You can manipulate input
-variables, define helper subroutines, or import a  module:
+Jekyll 'Front Matter', but more powerful. You can manipulate input variables,
+define helper subroutines, or import a  module:
 
 	@{[ init {
 		use Time::HiRes qw<time>;
@@ -257,13 +151,13 @@ the state of a template.
 
 
 There are a few ways of executing a template from your application. Each of
-them are accessable via class methods:
+them are accessible via class methods:
 
 	my $template=Template::Plex->load(...);		#Load a template
 
-	my $template=Template::Plex->cache(...);		#Load a template from cache
+	my $template=Template::Plex->cache(...);	#Load a template from cache
 
-	my $resulte= Template::Plex->immediate(...);	#Load from cace and render now
+	my $resulte= Template::Plex->immediate(...);	#Load from cache and render now
 
 
 A C<load> call returns a new template object each time, where a C<cache> call
@@ -276,7 +170,7 @@ The API section details the use of these methods fully.
 
 =head1 TEMPLATE REUSE
 
-Reusing templates can reduce the repetative nature of content and
+Reusing templates can reduce the repetitive nature of content and
 C<Template::Plex> supports three forms of template reuse
 	
 =head2 Sub Templates
@@ -286,7 +180,7 @@ C<Tempalte::Plex> a sub template is just another template. Templates can load
 templates.
 
 While you can load a sub template with a class method as above, it's not
-recommended. (You will need to specifiy all the variables and options again...)
+recommended. (You will need to specify all the variables and options again...)
 
 A better way is to call the same method on the C<$self> object:
 	
@@ -294,7 +188,7 @@ A better way is to call the same method on the C<$self> object:
 	@{[$self->cache(...)]}
 	@{[$self->immediate(...)]}
 
-This will automatically link the variables and relavant option to be the same
+This will automatically link the variables and relevant option to be the same
 as the current template.
 
 Better still, these methods made available within a template simply as a subroutine call:
@@ -318,7 +212,7 @@ special locations called slots. These are defined with the C<slot> directive:
 The slot name can be any string and the value can either be text or a template
 object.
 
-The 'defualt' is special and is the location at which a child template will be
+The 'default' is special and is the location at which a child template will be
 rendered. (more on child/parent/inheritance in the next section).
 
 A child template can also indicate it wants to fill other slots in the parent.
@@ -332,8 +226,8 @@ This will override the parent slot with the text or template specified by the ch
 
 =head2 Template Inheritance
 
-A template (child) can inhert content from another template (parent) using the
-C<inherit> subrotine inside a C<init> block:
+A template (child) can inherit content from another template (parent) using the
+C<inherit> subroutine inside a C<init> block:
 
 	@{[ init {
 		inherit "my_parent.plex";
@@ -349,9 +243,9 @@ C<inherit> subrotine inside a C<init> block:
 
 =head2 Example
 
-The following example shows a child template inheriting from a partent. The
-child will providecontent to the default slot in the parent. It also overrides
-the header slot in the parent with another tempalte which it loads:
+The following example shows a child template inheriting from a parent. The
+child will provide content to the default slot in the parent. It also overrides
+the header slot in the parent with another template which it loads:
 
 Parent Template:
 
@@ -375,18 +269,40 @@ Child template1:
 	@{[slot header=> load "header.plex";
 	This content will render into default slot
 
+=head1 LOGGING AND ERROR HANDLING
+
+As templates are executed, they may throw an exception. If a syntax error or
+file can not be red, an exception is also thrown. 
+
+In the case of a syntax error, C<die> is called with a summary of template,
+prefixed with line numbers which caused the error. Currently 5 line before and
+after the error are included for context.
+
+It is recommended to use a try/catch block to process the errors.
+
+Currently L<Log::ger> combined with C<Log::OK> is utilised for logging and
+debugging purposes. This comes in very handy when developing sub classes.
+
+
 =head1 FILTERS
 
-Unlike other template system, there are no built in filter. However as C<Template::Plex> is just perl you can require modules in to your templates. 
+Unlike other template system, there are no built in filter. However as
+C<Template::Plex> is just perl you can use builtin string routines or import
+other modules in to your template.
 
 =head1 API
 
 
 =head2 C<load>
 
-	Template::Plex->load($path,$vars,%opts);	#Class method
-	@{[$self->load($path,$vars, %opts);		#Object method
-	@{[load $path, $vars, %opts]}			#Subroutine
+	#Class method. Used by top level applciation
+	Template::Plex->load($path,$vars,%opts);
+
+	#Object method. Used within a template
+	@{[$self->load($path,$vars, %opts);	
+
+	#Subroutine. Prefered within a template. 
+	@{[load $path, $vars, %opts]}			
 	
 	
 A factory method, returning a new instance of a template, loaded from a scalar,
@@ -472,7 +388,7 @@ loading templates.
 
 Disables correcting missing init blocks.
 
-If not specified or false, a template file is scanned for a C<@{[init{..}]}
+If not specified or false, a template file is scanned for a C<@{[init{..}]}>
 directive. If one is found, the template is not modified. Otherwise, a 'null'
 block is added at the beginning of the template.
 
@@ -519,7 +435,7 @@ package name is created to prevent name collisions
 =item B<base>
 
 Specifies the base class type of the template. If not specified, templates are
-of type C<Template::Plex::Base>. Sub classes must inherit from this class. See
+of type C<Template::Plex>. Sub classes must inherit from this class. See
 the Sub classing section for more details
 
 =item B<no_alias>
@@ -532,10 +448,10 @@ variables need to be accessed via the C<%fields> hash when this is effect.
 
 =item Return value
 
-The return value is C<Template::Plex::Base> (or subclass) object which can be
+The return value is C<Template::Plex> (or subclass) object which can be
 rendered using the C<render> methods of that class.
 
-Please refer to L<Template::Plex::Base> for more details.	
+Please refer to L<Template::Plex> for more details.	
 
 =item Example Usage
 		my $hash={
@@ -819,7 +735,7 @@ C<KEY_OFFSET> and C<KEY_COUNT> to aid in adding extra fields in sub classes.
 If you intend on adding additional fields in your class you will need to do the
 following as the object
 
-	use parent "Template::Plex::Base";
+	use parent "Template::Plex";
 
 	use constant KEY_OFFSET=>Template::Plex::KEY_OFFSET+ Template::Plex::KEY_COUNT;
 
@@ -829,6 +745,108 @@ following as the object
 Any further sub classing will need to repeat this using using your package name.
 
 
+=head1 FEATURE CHEAT SHEET
+
+=over
+
+=item * Templates can contain a initialisation state
+
+	@{[
+		init {
+			# Nomral perl code here will only execute once
+			# when templates is loaded
+		}
+	]}
+
+
+=item * Templates can cache at caller location
+
+	Sub/template is loaded only the first time in this map/loop
+
+	@{[map {immediate undef, "path_to_template",{}} qw< a b c d e >]}
+	
+	And rendereds serveral times
+		
+
+=item * Lexical and package variables accessed/created within templates
+
+	@{[
+		init {
+			$input_var//=1; #set default
+		}
+
+	}]
+	
+	Value is $input_var;
+
+=item * Call and create subroutines within templates:
+
+	@{[
+		init {
+			sub my_great_calc {
+				my $input=shift;
+				$input*2/5;
+			}
+		}
+
+	}]
+
+	Result of calculation: @{[my_great_calc(12)]}
+
+=item * 'Include' Templates within templates easily:
+	
+	@{[include("path_to_file")]}
+
+=item * Recursive sub template loading
+	
+	@{[load "path_to_sub_template"]}
+
+=item * Conditional rendering
+
+	@{[ $flag and $var]}
+
+	@{[ $flag?$var:""]}
+	
+	@{[
+		pl {
+			if($flag){
+				#do stuff	
+			}
+		}
+	]}
+
+=item * Lists/Loops/maps
+	
+	template interpolates @$lists directly
+	
+	Items that are ok:
+	 @{[
+	 	do {
+			#Standard for loop
+			my $output;
+			for(@$items){
+				$output.=$_."\n" if /ok/;
+			}
+			$output;
+		}
+	}]
+
+	More ok items:
+	@{[map {/ok/?"$_\n":()} @$items]}
+
+	
+
+=item * C<use> other modules directly in templates:
+
+	@{[
+		init {	
+			use Time::HiRes qw<time>
+		}
+	]}
+
+	Time of day right now: @{[time]}
+
+=back
 
 
 

@@ -5,14 +5,13 @@ use warnings;
 
 use feature qw<say isa refaliasing>;
 no warnings "experimental";
-use Log::ger;
-use Log::OK;
 
-use Data::Dumper;
+
+use Log::ger;
+use Log::OK;	#Allow control of logging from the command line
 
 use Symbol qw<delete_package>;
 
-#use Template::Plex::Internal;
 use constant KEY_OFFSET=>0;
 use enum ("plex_=0",qw<meta_ args_ sub_ package_ init_done_flag_ skip_
 
@@ -21,6 +20,10 @@ use enum ("plex_=0",qw<meta_ args_ sub_ package_ init_done_flag_ skip_
 	>);
 
 use constant KEY_COUNT=>default_result_ - plex_ +1;
+
+#Template::Plex::Internal uses the field name constants so import it AFTER
+#we define them
+use Template::Plex::Internal;
 
 our %top_level_cache;
 sub new {

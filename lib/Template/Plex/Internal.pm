@@ -4,6 +4,7 @@ use warnings;
 
 use version; our $VERSION = version->declare('v0.4.0');
 use Template::Plex;
+
 use List::Util qw<min max>;
 
 #use Symbol qw<delete_package>;
@@ -20,12 +21,8 @@ use Exporter 'import';
 
 #our %EXPORT_TAGS = ( 'all' => [ qw( plex plx  block pl plex_clear jmap) ] );
 
-our @EXPORT_OK = qw<plex plx block pl plex_clear jmap>;# @{ $EXPORT_TAGS{'all'} } );
+our @EXPORT_OK = qw<block pl jmap>;# @{ $EXPORT_TAGS{'all'} } );
 
-our @EXPORT = qw(
-	plex
-	plx
-);
 
 my $Include=qr|\@\{\s*\[\s*include\s*\(\s*(.*?)\s*\)\s*\] \s* \}|x;
 my $Init=qr|\@\{\s*\[\s*init\s*\{(?:.*?)\}\s*\] \s* \}|smx;
@@ -35,7 +32,7 @@ sub new;	#forward declare new;
 
 sub lexical{
 	my $href=shift;
-	die "NEED A HASH REF " unless  ref $href eq "HASH" or !defined $href;
+	croak "NEED A HASH REF " unless  ref $href eq "HASH" or !defined $href;
 	$href//={};
 	\my %fields=$href;
 
@@ -75,31 +72,6 @@ $out.=lexical($href) unless $opts{no_alias};		#add aliased variables	from hash
 $out.='
 	my %cache;	#Stores code refs using caller as keys
 
-        #######################################################################################################################################################
-        # #lexical plex changes the prepare and also reuses options with out making it explicit                                                               #
-        # sub plex{                                                                                                                                           #
-        #         my ($path, $vars, %opts)=@_;                                                                                                                #
-        #         \my %fields=$href;                                                                                                                          #
-        #                                                                                                                                                     #
-        #                                                                                                                                                     #
-        #         my $template=Template::Plex::Internal->new(\&Template::Plex::Internal_prepare_template, $path, $vars?$vars:\%fields, %opts?%opts:%options); #
-        #                                                                                                                                                     #
-        #         $template->setup;                                                                                                                           #
-        #         $template;                                                                                                                                  #
-        # }                                                                                                                                                   #
-        # sub plx {                                                                                                                                           #
-        #         my ($path,$vars,%opts)=@_;                                                                                                                  #
-        #                                                                                                                                                     #
-        #         my $id=$path.join "", caller;                                                                                                               #
-        #         $cache{$id} and return $cache{$id}->render;                                                                                                 #
-        #                                                                                                                                                     #
-        #         my $template=&plex;                                                                                                                         #
-        #         $cache{$id}//=$template;                                                                                                                    #
-        #         #$template->setup;                                                                                                                          #
-        #         $template->render;                                                                                                                          #
-        # }                                                                                                                                                   #
-        #######################################################################################################################################################
-
 	sub clear {
 		%cache=();
 	}
@@ -135,7 +107,6 @@ $out.='
 		#we want to cache based on the caller
 		$id=$path.join "", caller;
 		#unshift @_, $id;
-			
 		$self->cache($id,$path, $var,@opts);
 	}
 
@@ -215,7 +186,7 @@ sub _prepare_template{
 		for ($min..$max){
 			$out.=$counter++."  ".$lines[$_];
 		}
-		die $out;
+		croak $out;
 	}
 	$plex->[Template::Plex::sub_]=$ref;
 	$plex;
@@ -239,8 +210,7 @@ sub _munge {
 		#not supported?
 		#
 	}
-
-	plex($path,"",%options);
+	Template::Plex::Internal->new(\&_prepare_template,$path,"",%options);	
 }
 
 sub _subst_inject {
@@ -270,7 +240,7 @@ sub _init_fix{
 	#Look for an init block
 	#unless($buffer=~/\@\[\{\s*init\s*\{
 	unless($buffer=~$Init){
-		carp __PACKAGE__." no init block detected. Adding dummy";
+		#carp __PACKAGE__." no init block detected. Adding dummy";
 		$buffer="\@{[init{}]}".$buffer;
 	}
 }
@@ -278,33 +248,6 @@ sub _init_fix{
 my $prepare=\&_prepare_template;
 
 my %cache;
-#toplevel cache                                                      #
-###################################################################################
-# #load a template to be rendered later.                                          #
-# # Compiled once but usable multiple times                                       #
-# sub plex{                                                                       #
-#         my ($path,$vars,%opts)=@_;                                              #
-#         #unshift @_, $prepare;  #push current top level scope                   #
-#         my $template=Template::Plex::Internal->new($prepare,$path,$vars,%opts); #
-#                                                                                 #
-#         $template->setup;                                                       #
-#         $template;                                                              #
-# }                                                                               #
-#                                                                                 #
-#                                                                                 #
-# #Load template and render in one call. Easy for on offs                         #
-# sub plx {                                                                       #
-#         my ($path,$vars,%opts)=@_;                                              #
-#         my $id=$path.join "", caller;                                           #
-#         $cache{$id} and "exisiting !" and return $cache{$id}->render;           #
-#         my $template=&plex;                                                     #
-#         $cache{$id}//=$template;                                                #
-#         #$template->setup;                                                      #
-#         $template->render;                                                      #
-# }                                                                               #
-###################################################################################
-
-
 
 
 sub clear {
@@ -350,11 +293,9 @@ sub new{
 				<$fh> 
 			}
 			else {
-				carp "Could not open file: $path $!";
+				croak "Could not open file: $path $!";
 				"";
 			}
-
-
 		}
 	};
 
