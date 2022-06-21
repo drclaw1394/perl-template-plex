@@ -2,7 +2,6 @@ package Template::Plex::Internal;
 use strict;
 use warnings;
 
-use version; our $VERSION = version->declare('v0.4.0');
 use Template::Plex;
 
 use List::Util qw<min max>;
