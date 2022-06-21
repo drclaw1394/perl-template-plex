@@ -301,7 +301,7 @@ sub new{
 
 	$args//={};		#set to empty hash if not defined
 	
-	chomp $data;
+	chomp $data unless $options{no_eof_chomp};
 	#Perform inject substitution
 	_subst_inject($data, root=>$root) unless $options{no_include};
 	#Perform suppurfluous EOL removal

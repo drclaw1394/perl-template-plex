@@ -6,8 +6,7 @@ Template::Plex - (P)erl (L)exical and (EX)tendable Templating
 
 Write a template:
 
-	#Contents of my_template.plex
-	
+	__DATA__	
 	@{[ 
 	    init {
 		use Time::HiRes qw<time>;
@@ -18,7 +17,8 @@ Write a template:
 	Ordered a $size pizza with $slices slices to share between @$people and
 	myself.  That averages @{[$slices/(@$people+1)]} slices each.
 
-Use a template
+Use a template:
+
 	use Template::Plex;
 
 	my $vars={
@@ -39,6 +39,7 @@ Use a template
 	
 
 Change values and render it again:
+
 	$vars->{size}="extra large";
 	$vars->{slices}=12;
 
@@ -61,9 +62,16 @@ The 'lexical' part of this module refers to the lexical aliasing of input
 variables into the template. This reduces the amount of markup required to
 reference variables and thus improves the style and readability of a template.
 
-Templates can be extended and reused by way of inheritance and slots. The
-template system itself can be extended by sub classing C<Template::Plex> and
-implementing customised load routines and other  helper methods
+Templates can be extended and reused by way of inclusion, sub templates and
+inheritance. The template system itself can be extended by sub classing
+C<Template::Plex> and implementing customised load routines and other  helper
+methods
+
+The short tutorial in this document plus the examples included in the
+distribution cover the basics to get you started. Reading through the C<load>
+API options is also recommended to get a better understanding on how templates
+are processed.
+
 
 =head1 MOTIATION
 
@@ -75,37 +83,39 @@ Lexical aliasing allows the input variables to be accessed directly by name
 (i.e.C<$fields-E<gt>{name}>) or by delimiting with custom syntax (i.e.
 C<E<lt>%=name%E<gt>>)
 
+I like the idea of Jekyll's 'Front Matter', but think its potential is limited
+as it can only support variables and not code. With perl's flexible syntax
+introducing code is doable.
 
 
-=head1 SYNTAX GENESIS
+=head1 TUTORIAL
 
-=head2 Background Basics
+=head2 Syntax Genesis
 
-We all know how to interpolate variables in to a string in perl:
+We all know how to interpolate variables into a string in perl:
 	
 	"This string $uses a $some{variables}"
 
 But how can we easily interpolate a statement, function or method call? We can
-use the C<@{[]}> construct:
+use the C<@{[]}> construct. 
 
 	"This is a perl string interpolating @{[ map uc, qw<a b c d>]}"
 
-If we need more statements, we can combine with a C<do> statement:
+If we need more statements, we can combine with a C<do> statement. Like always
+the last statement executed in a C<do> block is returned ( and interpolated
+into the string):
 
 	"This is a perl string interpolating 
 	@{[ do {
 		my $result="STATEMENTS";
 		...
 		lc $result;
-		}
+	    }
 	]}
 	"
 
-=head2 Look, a Template!
-
 Combining the above examples, we make a C<Template::Plex> template simply by
 removing the outer quoting operators:
-
 
 	This string $uses a $some{variables}
 
@@ -121,25 +131,22 @@ removing the outer quoting operators:
 A C<Template::Plex> template is just perl! The above is the literal text you
 can save to a file and load as a template.
 
-Specifically, it is the subset of perl that's valid between double quotation
-operators. 
+Specifically, a C<Template::Plex> template it is the subset of perl that's
+valid between double quotation operators. 
 
+=head2 Smart Meta Data and Code
 
-=head1 SMART META DATA
-
-Each template has access to it's self, using the C<$self> variable. This comes in very handy when loading sub templates
-
-
-Templates can include an C<init{}> block at the beginning which executed (only
-once) during the setup state of the template.  In some ways this is similar to
-Jekyll 'Front Matter', but more powerful. You can manipulate input variables,
-define helper subroutines, or import a  module:
+Templates can include an C<init{}> block at the beginning which is executed
+(only once) during the setup stage of the template.  In some ways this is
+similar to Jekyll 'Front Matter', but more powerful. You can manipulate input
+variables, define helper subroutines, or import modules:
 
 	@{[ init {
 		use Time::HiRes qw<time>;
 
 		sub my_func{ 1+2 };
-		}
+
+	    }
 	]}
 
 	Calculated @{[my_func]} at @{[time]}
@@ -147,42 +154,58 @@ define helper subroutines, or import a  module:
 The C<init> block does not inject any content into a template, but manipulates
 the state of a template.
 
-=head1 EXECUTING A TEMPLATE
+Each template has access to it's self, using the C<$self> variable. This comes
+in very handy when loading sub templates and doing more advanced task or even
+extending the template system.
 
+So far we have seen the C<do> and C<init> directives. General code can also be
+executed with a C<pl> block. This does the same as C<do> but does not inject
+the result into the template.
+
+
+=head2 Loading and Rendering
 
 There are a few ways of executing a template from your application. Each of
 them are accessible via class methods:
 
-	my $template=Template::Plex->load(...);		#Load a template
+	#Load a template and render later
+	my $template=Template::Plex->load($path, $vars, %options);		
+	my $result=$template->render;
 
-	my $template=Template::Plex->cache(...);	#Load a template from cache
+	#Load a template from cache and render later
+	my $template=Template::Plex->cache(undef, $path, $vars, %options);
+	my $result=$template->render;
 
-	my $resulte= Template::Plex->immediate(...);	#Load from cache and render now
+	#Load from cache and render now
+	my $result= Template::Plex->immediate(undef, $path,$vars,%options);	
 
 
 A C<load> call returns a new template object each time, where a C<cache> call
 returns a template already loaded (or loads it once), for a user defined key.
+The returned template is then rendered by calling the C<render> method.
 
-The C<immediate> call uses a cached template and immediately renders it
-returning the results into the current template.
+The C<immediate> call loads and caches a template with a user define key and
+then immediately renders it, returning the results.
 
-The API section details the use of these methods fully.
+An important option when loading templates is the B<root> option. This is the
+directory (relative to the working directory) which is prepended to all paths.
+This makes it easy for templates to refer to other templates with relative
+paths, regardless of the working directory.
 
-=head1 TEMPLATE REUSE
+=head2 Template Reuse
 
-Reusing templates can reduce the repetitive nature of content and
-C<Template::Plex> supports three forms of template reuse
+Reusing templates can reduce the repetitive nature of content.
+C<Template::Plex> provides multiple facilities for template reuse.
+
 	
-=head2 Sub Templates
+=head3 Sub Templates
 
-Theses are similar to 'partials' in other template languages. In
-C<Tempalte::Plex> a sub template is just another template. Templates can load
-templates.
+A sub template is just another template. While you can load a sub template with
+the class methods shown previously, it's not recommended. This is because you
+would need to specify all the variables and options again manually.
 
-While you can load a sub template with a class method as above, it's not
-recommended. (You will need to specify all the variables and options again...)
-
-A better way is to call the same method on the C<$self> object:
+You normally would like to pass on the same variables and options to sub
+templates, so a better way is to call the same method on the C<$self> object:
 	
 	@{[$self->load(...)]}
 	@{[$self->cache(...)]}
@@ -191,14 +214,15 @@ A better way is to call the same method on the C<$self> object:
 This will automatically link the variables and relevant option to be the same
 as the current template.
 
-Better still, these methods made available within a template simply as a subroutine call:
+Better still, these methods are made available within a template simply as a
+subroutine call:
 
 	@{[load ... ]}
 	@{[cache ... ]}
 	@{[immediate ...]}
 
 
-=head2 Slots
+=head3 Slots and Inheritance
 
 A sub template can be used at any location within a template. However there are
 special locations called slots. These are defined with the C<slot> directive:
@@ -210,42 +234,31 @@ special locations called slots. These are defined with the C<slot> directive:
 	@{[slot]}
 
 The slot name can be any string and the value can either be text or a template
-object.
+object.  This value is the default value, which is used when no child template
+wants to fill the slot. 
 
-The 'default' is special and is the location at which a child template will be
-rendered. (more on child/parent/inheritance in the next section).
+A slot named 'default' (or no name) is special and is the location at which a
+child template body will be rendered. 
 
-A child template can also indicate it wants to fill other slots in the parent.
+A child template can also fill other slots in the parent by explicitly using
+the C<fill_slot> directive. The value can be text or a loaded template
 
-This is done with the C<fill_slot> directive:
+	@{[fill_slot name=>"override content"]}
+	@{[fill_slot another=>load "path to template"]}
 
-	@{[fill_slot name=>...]}
+Child can setup inheritance by using the C<inherit> directive within a
+C<init> block, specifying the template to use as the parent:
 
-This will override the parent slot with the text or template specified by the child.
-
-
-=head2 Template Inheritance
-
-A template (child) can inherit content from another template (parent) using the
-C<inherit> subroutine inside a C<init> block:
 
 	@{[ init {
 		inherit "my_parent.plex";
-
-
 		}
 	]}
 
-	The body of the child will be rendered into  parents default slot
 
-	@{[fill_slot another=>"this text will override parent slot"]}
-
-
-=head2 Example
-
-The following example shows a child template inheriting from a parent. The
-child will provide content to the default slot in the parent. It also overrides
-the header slot in the parent with another template which it loads:
+The following is an example showing a child template inheriting from a parent.
+The child will provide content to the default slot in the parent and also
+override the 'header' slot with another template which it loads:
 
 Parent Template:
 
@@ -258,7 +271,7 @@ Sub template (header):
 
 	-=-=-=Fancy header=-=-=-
 
-Child template1:
+Child template:
 
 	@{[ init {
 		
@@ -269,14 +282,47 @@ Child template1:
 	@{[slot header=> load "header.plex";
 	This content will render into default slot
 
-=head1 LOGGING AND ERROR HANDLING
+=head3 Inclusion
+
+Much like the C language preprocessor, including an other template or other file
+will do a literal copy of its contents into the calling template.  The resulting
+text is processed again and again as long as more include statements are
+present:
+
+	@{[include("...")]}
+
+This basically makes a single large template. As such the included templates
+will use the same aliased variables.
+
+In simple use cases, it is similar to loading a sub template. However it lacks
+the flexibility of sub templates.
+
+=head2 Logging and Error Handling
 
 As templates are executed, they may throw an exception. If a syntax error or
-file can not be red, an exception is also thrown. 
+file can not be red, an exception is also thrown during load.
 
 In the case of a syntax error, C<die> is called with a summary of template,
 prefixed with line numbers which caused the error. Currently 5 line before and
-after the error are included for context.
+after the error are included for context. Deliberately breaking the synopsis
+example gives the following error output:
+
+	"use" not allowed in expression at (GLOB(0x7f9423a22368)) line 4, within string
+	syntax error at (GLOB(0x7f9423a22368)) line 4, near "deliberate_ERROR
+		use Time::HiRes "
+	Type of arg 1 to init must be block or sub {} (not reference constructor) at (GLOB(0x7f9423a22368)) line 7, near "}
+	]"
+	Execution of (GLOB(0x7f9423a22368)) aborted due to compilation errors.
+	1  {@{[
+	2      init {
+	3      deliberate_ERROR
+	4  	use Time::HiRes qw<time>;
+	5  	$title="Mr.";
+	6      }
+	7  ]}
+	8  Dear $title Connery,
+	9  Ordered a $size pizza with $slices slices to share between @$people and
+	10  myself.  That averages @{[$slices/(@$people+1)]} slices each.}
 
 It is recommended to use a try/catch block to process the errors.
 
@@ -284,11 +330,11 @@ Currently L<Log::ger> combined with C<Log::OK> is utilised for logging and
 debugging purposes. This comes in very handy when developing sub classes.
 
 
-=head1 FILTERS
+=head2 Filters
 
-Unlike other template system, there are no built in filter. However as
-C<Template::Plex> is just perl you can use builtin string routines or import
-other modules in to your template.
+Unlike other template system, there are no built in filters. However as
+C<Template::Plex> templates are just perl you are free to use builtin string
+routines or import other modules in to your template.
 
 =head1 API
 
@@ -296,13 +342,16 @@ other modules in to your template.
 =head2 C<load>
 
 	#Class method. Used by top level applciation
-	Template::Plex->load($path,$vars,%opts);
+	Template::Plex->load($path, $vars, %opts);
 
 	#Object method. Used within a template
-	@{[$self->load($path,$vars, %opts);	
+	@{[$self->load($path, $vars, %opts);	
 
 	#Subroutine. Prefered within a template. 
 	@{[load $path, $vars, %opts]}			
+
+	#Reuse existing $vars and %opts from withing a template
+	@{[load $path]}
 	
 	
 A factory method, returning a new instance of a template, loaded from a scalar,
@@ -310,6 +359,9 @@ file path or an existing file handle.
 
 From a top level user application, the class method must be used. From within a
 template, either the object method form or subroutine form can be used.
+
+If now variables or options are specified when loading a sub templates, the
+variables and options from the calling templates are reused.
 
 
 Arguments to this function:
@@ -333,25 +385,25 @@ which is used directly as the template.
 
 
 
-=item C<$variables_hash>
+=item C<$vars>
 
 This is an optional argument but if present must be an empty hash ref C<{}> or
 C<undef>.
 
-The top level items of the C<$variables_hash> hash are aliased into the
+The top level items of the C<$vars> hash are aliased into the
 template using the key name (key names must be valid for a variable name for
 this to operate). This allows an element such as C<$fields{name>}> to be
 directly accessible as C<$name> in the template and sub templates.
 
-External modification of the items in C<$variable_hash> will be visible in the
+External modification of the items in C<$vars> will be visible in the
 template. This is thee primary mechanism change inputs for subsequent renders
 of the template.
 
-In addition, the C<$variables_hash> itself is aliased to C<%fields> variable
+In addition, the C<$vars> itself is aliased to C<%fields> variable
 (note the %) and directly usable in the template like a normal hash e.g.
 C<$fields{name}>
 
-If the C<$variables_hash> is an empty hash ref C<{}> or C<undef> then no
+If the C<$vars> is an empty hash ref C<{}> or C<undef> then no
 variables will be lexically aliased. The only variables accessible to the
 template will be via the C<render> method call.
 
@@ -361,7 +413,7 @@ These are non required arguments, but must be key value pairs when used.
 
 Options are stored lexically for access in the template in the variable
 C<%options>. This variable is automatically used as the options argument in
-recursive calls to C<plex> or C<plx>, if no options are provided.
+recursive calls to C<load> or C<plx>, if no options are provided.
 
 
 Currently supported options are:
@@ -381,7 +433,7 @@ Disables the uses of the preprocessor include feature. The template text will
 not be scanned  and will prevent the C<include> feature from operating.
 See C<include> for more details
 
-This doesn't impact recursive calls to C<plex> or C<plx> when dynamically/conditionally
+This doesn't impact recursive calls to C<load> when dynamically/conditionally
 loading templates.
 
 =item C<no_init_fix>
@@ -398,9 +450,7 @@ mechanism.
 
 =item B<no_block_fix>
 
-Disables removing of EOL after a C<@{[]}> when  the closing C<}]> starts on a
-new line. Does not effect C<@{[]}> on a single line or embedded with other
-text:
+Disables removing of EOL after a C<@{[]}>
 
 	eg	
 		
@@ -411,7 +461,7 @@ text:
 		Line 3	
 	
 In the above example, the default behaviour is to remove the newline after the
-closing C<]}> when it is on a separate line. The rendered output would be:
+closing C<]}>. The rendered output would be:
 
 
 		Line1
@@ -425,6 +475,18 @@ If block fix was disabled (i.e. C<no_block_fix> was true) the output would be:
 		Line3
 
 
+=item B<no_eof_chomp>
+
+When this key is present and value is true, the last newline in the template
+file is left in place.
+
+Most text editors insert a extra newline as the last character in a file.  By
+default a chomp is performed before the template is prepared to avoid extra
+newlines in the output when using sub templates. 
+
+If you really need that newline you can specify the C<no_eof_chomp =E<gt> 1>
+key or place an extra empty line at the end of your template.
+
 
 =item B<package>
 
@@ -435,13 +497,16 @@ package name is created to prevent name collisions
 =item B<base>
 
 Specifies the base class type of the template. If not specified, templates are
-of type C<Template::Plex>. Sub classes must inherit from this class. See
-the Sub classing section for more details
+of type C<Template::Plex>. Sub classes must inherit from this class.
+
+Sub classes should force always specify this field.
 
 =item B<no_alias>
 
-This disables the aliasing of the top level element in the argument hash. All
-variables need to be accessed via the C<%fields> hash when this is effect.
+Top level elements in a $vars hash are aliased into the template by default.
+
+If this key is present and true, aliasing is disabled and all variables need to
+be accessed via the C<%fields>.
 
 
 =back
@@ -449,9 +514,7 @@ variables need to be accessed via the C<%fields> hash when this is effect.
 =item Return value
 
 The return value is C<Template::Plex> (or subclass) object which can be
-rendered using the C<render> methods of that class.
-
-Please refer to L<Template::Plex> for more details.	
+rendered using the C<render> method.
 
 =item Example Usage
 		my $hash={
@@ -461,7 +524,7 @@ Please refer to L<Template::Plex> for more details.
 
 		my $template_dir="/path/to/dir";
 
-		my $obj=plex "template.plex", $hash, root=>$template_dir;
+		my $obj=Template::Plex->load("template.plex", $hash, root=>$template_dir);
 		$obj->render;
 =back
 
@@ -470,30 +533,44 @@ Please refer to L<Template::Plex> for more details.
 =head2 C<cache>
 
 	#Class method
-	Template::Plex->cache $key, $path, $variables_hash, %options;
+	Template::Plex->cache($key, $path, $vars, %options);
 
 	#Object method
-	$self->cache $key, $path, $variables_hash, %options;
+	$self->cache($key, $path, $vars, %options);
 
 	#Subroutine
-	cache $key, $path, $variables_hash, %options;
+	cache $key, $path, $vars, %options;
 
+	#Use the current line/package/template as a key
 
-This is a wrapper around the C<load> API, to improve performance of sub template loading. The first argument is a key to name the template when loaded. Subsequent calls with the same key will return the already loaded template from a cache.
+	cache undef, $path, $vars, $%opts;
 
-If called from the top level user application, the cache is shared. 
-However templates have their own cache to prevent cross linking.
+This is a wrapper around the C<load> API, to improve performance of sub
+templates used in loops. The first argument is a key to identity the template
+when loaded.  Subsequent calls with the same key will return the already loaded
+template from active cache.
 
-If no key is provided, then the information about the caller  (including the
-line number) is used generate one. This approach allows for a template which
-maybe rendered multiple times in a loop, to only be loaded once for example.
+If called from the top level user application, the cache is shared.
+Templates have their own cache storage to prevent cross collisions.
+
+If no key is provided, then information about the caller (including the line
+number, package and target template) is used generate one. This approach allows
+for a template which maybe rendered multiple times in a loop, to only be loaded
+once for example.
 
 =head2 C<immediate>
 
 	#Class method
-	Template::Plex->immediate $key, $path, $variables_hash, %options;
-	$self->immediate $key, $path, $variables_hash, %options;
-	immediate $key, $path, $variables_hash, %options;
+	Template::Plex->immediate($key, $path, $vars, %options);
+	
+	#Object method
+	$self->immediate($key, $path, $vars, %options);
+
+	#Subrutine
+	immediate $key, $path, $vars, %options;
+
+	#Use current line/package/template as key
+	immediate undef, $path, $vars, %options;
 
 
 Loads and renders a template immediately. Uses the same arguments as C<cache>.
@@ -513,10 +590,10 @@ preprocessor. This is a preprocessing step which happens before the template is
 prepared for execution. 
 
 
-If C<root> was included in the options to C<plex>, then it is prepended to
+If C<root> was included in the options to C<load>, then it is prepended to
 C<path> if defined.
 
-When a template is loaded by C<plex> the processing of this is
+When a template is loaded by C<load> the processing of this is
 subject to the C<no_include> option. If C<no_include> is specified, any
 template text that contains the C<@{[include("path")}]> text will result in a
 syntax error
@@ -864,7 +941,7 @@ a would make it easier to read:
 	#Before executing template
 	local $"="\n";
 
-	plex ...
+	load ...
 
 Or alternatively use C<jmap> to explicitly set the interpolation separator each time
 
@@ -909,19 +986,13 @@ C<pl{..}> to execute multiple statements and not inject the last statement:
 
 	@{[ pl {our $temp=1;} }];
 
-=item * Last newline of templates are chomped
-
-Most text editors insert a newline as the last character in a file.  A chomp is
-performed before the template is prepared to avoid extra newlines in the output
-when using sub templates. If you really need that newline, place an empty line
-at the end of your template
 
 =back
 
 =head2  More on Input Variables
 
 If the variables to apply to the template completely change (note: variables
-not values), then the aliasing setup during a C<plex> call will not
+not values), then the aliasing setup during a C<load> call will not
 reflect what you want.
 
 However the C<render> method call allows a hash ref containing values to be
@@ -949,7 +1020,7 @@ a C<render> call:
 
 	my $override_data={name=>"Eva"};
 
-	my $template=plex $template, $base_data;
+	my $template=load $template, $base_data;
 
 	my $string=$template->render($override_data);
 	#string will be "my name is Eva and I am 10
@@ -958,8 +1029,11 @@ As an example, this could be used to 'template a template' with global, slow
 changing variables stored as the aliased variables, and the fast changing, per
 render data being supplied as needed.
 
+=head1 ISSUES 
 
-=head2 Security
+Templates are completely processed in memory. A template can execute sub
+templates and run general IO code, so in theory it would be possible to break
+up very large data templates and stream them to disk...
 
 This module uses C<eval> to generate the code for rendering. This means that
 your template, being perl code, is being executed. If you do not know what is
@@ -969,18 +1043,10 @@ Aliasing means that the template has write access to variables outside of it.
 So again if you don't know what your templates are doing, then maybe this
 module isn't for you
 
+=head1 TODO
 
-=head1 ISSUES 
-
-Debugging templates could be much better
-
-Unless specifically constructed to write to file, templates are completely
-processed in memory.
-
-C<plx> caching will not be effective with literal templates unless they are
-stored in an anonymous array.
-	
-
+Extending the template system has been mentioned but not elaborated on.
+Probably need to make an other tutorial document.
 
 =head1 SEE ALSO
 
