@@ -2,21 +2,11 @@ use strict;
 use warnings;
 use feature qw<say>;
 
-use Log::ger;
-use Log::ger::Output "Screen";
-
-use Log::OK {opt=>"verbose"};
-use Log::ger::Util;
-Log::ger::Util::set_level Log::OK::LEVEL;
-
-
 use Test::More tests => 17;
-use Data::Dumper;
 
 
 BEGIN { use_ok('Template::Plex') };
 
-use Template::Plex::Internal;
 use Template::Plex;
 
 my $default_data={data=>[1,2,3,4]};
@@ -153,14 +143,14 @@ ok $result eq "my name is John not Jill", "Lexical and override access";
 {
         #Testing sub class
         package My::Base{
-                use parent "Template::Plex::Base";
+                use parent "Template::Plex";
                 sub __internal_test_proxy__{
                         "OVERRIDE";
 
                 }
         }
         my %vars;
-        my $result= Template::Plex->immediate(undef, ['@{[$plex->__internal_test_proxy__]}'], \%vars, base=>"My::Base");
+        my $result= Template::Plex->immediate(undef, ['@{[$self->__internal_test_proxy__]}'], \%vars, base=>"My::Base");
 
         ok $result eq "OVERRIDE", "Subclass methods";
 
@@ -182,40 +172,4 @@ ok $result eq "my name is John not Jill", "Lexical and override access";
         #my $setup=$template->setup;
         my $render=$template->render;
         ok $render eq "Hello!", "Render";
-}
-
-
-{
-        #Debugging and error reporting
-        #
-        my $top=[
-'
-okasd
-asd
-fasdf
-asdf
-sadf
-asd
-sad
-asd
-asd
-asdf
-d2e
-df
-@{[init {
-##sdf="asdf";
-}
-]}
-a template  with a n
-intentional
-error on line 4
-asdf
-asdf
-asdf
-asdf2323
-sd23
-df
-'
-];
-        my $result=Template::Plex->load($top, undef);
 }
