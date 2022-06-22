@@ -1,6 +1,8 @@
 Revision history for Perl extension Template::Plex.
+0.4.1	Wed 22 Jun 2022 14:30:56 AEST
+	- Fix bad tests
 
-0.4.0
+0.4.0	Wed 22 Jun 2022 12:30:56 AEST
 	- Template inheritance and slotting
 	- Requires Perl 5.36 (for isa)
 	- User subclassing is now possible
