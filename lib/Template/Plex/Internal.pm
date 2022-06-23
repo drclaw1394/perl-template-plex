@@ -9,7 +9,7 @@ use List::Util qw<min max>;
 #use Symbol qw<delete_package>;
 use Carp qw<carp croak>;
 
-use feature qw<say state refaliasing lexical_subs>;
+use feature qw<state refaliasing>;
 no warnings "experimental";
 
 #use File::Basename qw<dirname basename>;
@@ -82,7 +82,7 @@ $out.='
 	$plex->[Template::Plex::skip_]=\&skip;
 
 
-	my sub init :prototype(&){
+	sub init :prototype(&){
 		$self->_init(@_);
 	}
 

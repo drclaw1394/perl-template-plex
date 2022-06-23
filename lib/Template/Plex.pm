@@ -3,8 +3,8 @@ package Template::Plex;
 use strict;
 use warnings;
 
-use version; our $VERSION = version->declare('v0.4.1');
-use feature qw<say isa refaliasing>;
+use version; our $VERSION = version->declare('v0.4.2');
+use feature qw<say refaliasing>;
 no warnings "experimental";
 
 
@@ -119,7 +119,7 @@ sub _init {
 	
 	return if $self->[init_done_flag_];
 	Log::OK::DEBUG and log_debug("Template::Plex: Initalising Template: ".$self->meta->{file});
-	unless($self isa Template::Plex){
+	unless($self->isa("Template::Plex")){
 	#if($self->[meta_]{package} ne caller){
 		Log::OK::ERROR and log_error("Template::Plex: init must only be called within a template: ".$self->meta->{file});
 		return;
@@ -181,7 +181,7 @@ sub slot {
 	my $output="";
 	
 	$data//=$default_value;
-	if($data isa Template::Plex){
+	if($data->isa("Template::Plex")){
 		#render template
 		if($slot_name eq "default"){
 			Log::OK::TRACE and log_trace __PACKAGE__.": copy default slot";
@@ -213,8 +213,16 @@ sub fill_slot {
 		$parent->[slots_]{default}=$self;
 	}
 	else{
-		for my ($k,$v)(@_){
-			$parent->[slots_]{$k}=$v;
+		#5.36 multi element for loop
+		#disabled for backwards compatability
+		#
+		#for my ($k,$v)(@_){
+		#	$parent->[slots_]{$k}=$v;
+		#}
+
+		my %fillers=@_;
+		for (keys %fillers){
+			$parent->[slots_]{$_}=$fillers{$_};
 		}
 	}
 	"";
