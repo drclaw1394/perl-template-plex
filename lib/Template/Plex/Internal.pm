@@ -177,11 +177,19 @@ sub _prepare_template{
  	my $ref=eval $prog;
 	if($@ and !$ref){
 
+    #####################################################
+    # use feature ":all";                               #
+    # say "START OF TEMPLATE=====";                     #
+    # my$i=0;                                           #
+    # say join "\n", map { $i++. $_} split /\n/, $prog; #
+    # say "END OF TEMPLATE=====";                       #
+    # say $@;                                           #
+    #####################################################
     my $context=Error::Show::context error=>$@, program=>$prog,
       start_mark=>'##__START',
       end_mark=>'##__END',
       start_offset=>2,
-      end_offset=>4,
+      end_offset=>5,
       limit=>1
       ;
     # Replace the sudo filename with the file name if we have one 

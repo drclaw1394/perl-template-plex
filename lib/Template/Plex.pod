@@ -55,8 +55,8 @@ Change values and render it again:
 =head1 DESCRIPTION
 
 C<Template::Plex> facilitates the use of perl (not embedded perl) as a template
-language. It implements bootstrapping and a system to load, cache,
-inherit and render templates with minimal code.
+language. It implements bootstrapping and a system to load, cache, inherit and
+render templates with minimal code.
 
 The 'lexical' part of this module refers to the lexical aliasing of input
 variables into the template. This reduces the amount of markup required to
@@ -65,7 +65,7 @@ reference variables and thus improves the style and readability of a template.
 Templates can be extended and reused by way of inclusion, sub templates and
 inheritance. The template system itself can be extended by sub classing
 C<Template::Plex> and implementing customised load routines and other  helper
-methods
+methods.
 
 The short tutorial in this document plus the examples included in the
 distribution cover the basics to get you started. Reading through the C<load>
@@ -101,9 +101,9 @@ use the C<@{[]}> construct.
 
 	"This is a perl string interpolating @{[ map uc, qw<a b c d>]}"
 
-If we need more statements, we can combine with a C<do> statement. Like always
-the last statement executed in a C<do> block is returned ( and interpolated
-into the string):
+If we need multiple statements, we can combine with a C<do> statement. Like
+always the last statement executed in a C<do> block is returned ( and
+interpolated into the string):
 
 	"This is a perl string interpolating 
 	@{[ do {
@@ -184,7 +184,7 @@ A C<load> call returns a new template object each time, where a C<cache> call
 returns a template already loaded (or loads it once), for a user defined key.
 The returned template is then rendered by calling the C<render> method.
 
-The C<immediate> call loads and caches a template with a user define key and
+The C<immediate> call loads and caches a template with a user defined key and
 then immediately renders it, returning the results.
 
 An important option when loading templates is the B<root> option. This is the
@@ -327,6 +327,10 @@ It is recommended to use a try/catch block to process the errors.
 
 Currently L<Log::ger> combined with C<Log::OK> is utilised for logging and
 debugging purposes. This comes in very handy when developing sub classes.
+
+Also note that line numbers reported in errors can be inaccurate when the
+B<block_fix> and B<include> features are in use, as the content of the source
+file is altered
 
 
 =head2 Filters
@@ -473,6 +477,10 @@ If block fix was disabled (i.e. C<no_block_fix> was true) the output would be:
 
 		Line3
 
+B<NOTE:> in the case of a syntax error present in the template, the line
+numbers maybe incorrect when block_fix is active, as it effectivly removes a
+line from the source 
+
 
 =item B<no_eof_chomp>
 
@@ -612,6 +620,10 @@ When a template is loaded by C<load> the processing of this is
 subject to the C<no_include> option. If C<no_include> is specified, any
 template text that contains the C<@{[include("path")}]> text will result in a
 syntax error
+
+B<NOTE:> in the case of a syntax error present in the template, the line
+numbers maybe incorrect if C<include> is used, as it effectivly adds lines to
+the template source.
 
 =head2 pl
 
@@ -1059,6 +1071,11 @@ changing variables stored as the aliased variables, and the fast changing, per
 render data being supplied as needed.
 
 =head1 ISSUES 
+
+Enabling lexically scoped features (ie C<use feature "say">) is only in the
+block it used in. Unfortunately that means that features enabled in an init
+block will not be active in subsequent blocks. The inject or use option would
+need to be utilised to achieve this currently.
 
 Templates are completely processed in memory. A template can execute sub
 templates and run general IO code, so in theory it would be possible to break

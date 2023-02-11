@@ -14,6 +14,7 @@ v0.5.0
   [pod]
   - Improved Error and Logging section with a new example
   - Documented new features
+  - Added information about line error numbers in regards to block_fix and include
 
   [other]
   - Reformated Changes file
