@@ -1,7 +1,7 @@
 Revision history for Perl extension Template::Plex.
 
 v0.5.0
-  [features]
+  [new features]
   - added append_slot
   - added prepend_slot
   - "cheat comments", which allows line starting with a perl comment to be
