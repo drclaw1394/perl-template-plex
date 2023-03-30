@@ -363,7 +363,7 @@ file path or an existing file handle.
 From a top level user application, the class method must be used. From within a
 template, either the object method form or subroutine form can be used.
 
-If now variables or options are specified when loading a sub templates, the
+If no variables or options are specified when loading a sub templates, the
 variables and options from the calling templates are reused.
 
 
@@ -555,42 +555,67 @@ rendered using the C<render> method.
 
 =head2 C<cache>
 
-	#Class method
+	# Class method
+  # 
 	Template::Plex->cache($key, $path, $vars, %options);
+	Template::Plex->cache($path, $vars, %options);
+	Template::Plex->cache($key);
 
-	#Object method
-	$self->cache($key, $path, $vars, %options);
+	# Object method
+	$self->cache($key, $path, $vars, %options); 
+	$self->cache($path, $vars, %options);
+	$self->cache($path);
 
-	#Subroutine
+	# Subroutine
 	cache $key, $path, $vars, %options;
+	cache $path, $vars, %options;
+	cache $path;
 
 	#Use the current line/package/template as a key
 
 	cache undef, $path, $vars, $%opts;
+	cache undef, $path, $vars, $%opts;
 
-This is a wrapper around the C<load> API, to improve performance of sub
-templates used in loops. The first argument is a key to identity the template
-when loaded.  Subsequent calls with the same key will return the already loaded
-template from active cache.
+This is a wrapper around the C<load> API primarily  used to improve performance
+of sub templates used in loops. 
+
+If the number of arguments passed to the cache functions/method is 1, it is
+assumed to be a path and an implicit cache key is used.
+
+If the number of arguments larger than 1, and the second argument is a hash ref
+of variables, then implicit cache key is used and the first argument is
+expected to be a path.
+
+Otherwise explicit cache key is expected as the first argument and the second
+arguement is expected to be a path.
+
+Subsequent calls with the same key will return the already loaded template from
+active cache.
 
 If called from the top level user application, the cache is shared.
 Templates have their own cache storage to prevent cross collisions.
 
-If no key is provided, then information about the caller (including the line
-number, package and target template) is used generate one. This approach allows
-for a template which maybe rendered multiple times in a loop, to only be loaded
-once for example.
+If the explicit key provided is C<undef> or an implicit key is used, then
+information about the caller (including the line number, package and target
+template) is used generate one. This approach allows for a template which maybe
+rendered multiple times in a loop, to only be loaded once for example.
 
 =head2 C<immediate>
 
-	#Class method
+	# Class method
 	Template::Plex->immediate($key, $path, $vars, %options);
+	Template::Plex->immediate($path, $vars, %options);
+	Template::Plex->immediate($path);
 	
-	#Object method
+	# Object method
 	$self->immediate($key, $path, $vars, %options);
+	$self->immediate($path, $vars, %options);
+	$self->immediate($path);
 
-	#Subrutine
+	# Subrutine
 	immediate $key, $path, $vars, %options;
+	immediate $path, $vars, %options;
+	immediate $key;
 
 	#Use current line/package/template as key
 	immediate undef, $path, $vars, %options;
@@ -616,10 +641,9 @@ prepared for execution.
 If C<root> was included in the options to C<load>, then it is prepended to
 C<path> if defined.
 
-When a template is loaded by C<load> the processing of this is
-subject to the C<no_include> option. If C<no_include> is specified, any
-template text that contains the C<@{[include("path")}]> text will result in a
-syntax error
+When a template is loaded by C<load> the processing of this is subject to the
+C<no_include> option. If C<no_include> is specified, any template text that
+contains the C<@{[include("path")}]> text will result in a syntax error
 
 B<NOTE:> in the case of a syntax error present in the template, the line
 numbers maybe incorrect if C<include> is used, as it effectivly adds lines to

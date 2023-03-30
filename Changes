@@ -1,5 +1,15 @@
 Revision history for Perl extension Template::Plex.
 
+v0.6.0 2023-03-27
+  [new features]
+    - cache and immediate changes
+    - TODO add tests for new cache and immediate 
+    - added fill_var append_var and prepend_var to set,append and prepend package variables. All return empty strings
+    - TODO Document fill_var et al
+
+  [bug fixes]
+    - a slot in a parent template which no default value doesn't die now
+
 v0.5.0
   [new features]
   - added append_slot
