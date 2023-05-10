@@ -1,5 +1,11 @@
 Revision history for Perl extension Template::Plex.
 
+v0.6.1 2023-05-09
+  [improvements]
+    - Error::Show is now only required when an error is to be shown, saving on
+      memory otherwise
+    - Removed unused imported modules, reducing wasted memory
+
 v0.6.0 2023-03-27
   [new features]
     - cache and immediate changes

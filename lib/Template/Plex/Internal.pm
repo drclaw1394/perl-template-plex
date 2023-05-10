@@ -1,11 +1,10 @@
 package Template::Plex::Internal;
 use strict;
 use warnings;
-use Error::Show;
 
 use Template::Plex;
 
-use List::Util qw<min max>;
+#use List::Util qw<min max>;
 
 #use Symbol qw<delete_package>;
 use Carp qw<carp croak>;
@@ -13,9 +12,8 @@ use Carp qw<carp croak>;
 use feature qw<state refaliasing>;
 no warnings "experimental";
 
-#use File::Basename qw<dirname basename>;
 use File::Spec::Functions qw<catfile>;
-use File::Basename qw<dirname>;
+#use File::Basename qw<dirname>;
 use Exporter 'import';
 
 
@@ -223,13 +221,15 @@ sub _prepare_template{
 	my $prog=&Template::Plex::Internal::bootstrap;
  	my $ref=eval $prog;
 	if($@ and !$ref){
-    my $context=Error::Show::context error=>$@, program=>$prog,
+    my $e=$@; #Save the error as require will nuke it
+    require Error::Show;
+    my $context=Error::Show::context(error=>$e, program=>$prog,
       start_mark=>'##__START',
       end_mark=>'##__END',
       start_offset=>2,
       end_offset=>5,
       limit=>1
-      ;
+    );
     # Replace the sudo filename with the file name if we have one 
     my $filename=$meta{file};
     $context=~s/(\(eval \d+\))/$filename/g;
@@ -286,7 +286,6 @@ sub _init_fix{
 	#Look for an init block
 	#unless($buffer=~/\@\[\{\s*init\s*\{
 	unless($buffer=~$Init){
-		#carp __PACKAGE__." no init block detected. Adding dummy";
 		$buffer="\@{[init{}]}".$buffer;
 	}
 }
