@@ -3,7 +3,7 @@ package Template::Plex;
 use strict;
 use warnings;
 
-use version; our $VERSION = version->declare('v0.6.1');
+use version; our $VERSION = version->declare('v0.6.0');
 use feature qw<say refaliasing>;
 no warnings "experimental";
 
