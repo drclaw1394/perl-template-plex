@@ -1,5 +1,9 @@
 Revision history for Perl extension Template::Plex.
 
+v0.6.1 
+  [improveents]
+  - RAM usage reduction on loading the module. (5.8MB down to 3.7MB)
+
 v0.6.0 2023-05-09
 
   [new features]
