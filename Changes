@@ -1,14 +1,17 @@
 Revision history for Perl extension Template::Plex.
 
-v0.6.2 2023-12-30
+v0.6.3
+  [improvements]
+    - Added DEBUG flag in addition to Log::OK levels to prevent logging noise
+
+v0.6.2 2023-08-28
   [fixes]
-  - Added missing dependencies Export::These and constant::more
-  - Removed unused dependency enum
-  - Added DEBUG flag in addition to Log::OK levels
+    - Added missing dependencies Export::These and constant::more
+    - Removed unused dependency enum
   
 v0.6.1  2023-08-27
   [improvements]
-  - RAM usage reduction on loading the module. (5.8MB down to 3.7MB)
+    - RAM usage reduction on loading the module. (5.8MB down to 3.7MB)
 
 v0.6.0 2023-05-09
   [new features]
