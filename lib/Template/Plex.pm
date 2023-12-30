@@ -14,6 +14,7 @@ use Log::OK;	#Allow control of logging from the command line
 use Symbol qw<delete_package>;
 
 use constant::more KEY_OFFSET=>0;
+use constant::more DEBUG=>0;
 
 use constant::more {plex_=>0, meta_=>1, args_=>2, sub_=>3,
   package_=>4, init_done_flag_=>5, skip_=>6,
@@ -43,7 +44,7 @@ sub load {
     my ($self, $path, $vars, %opts)=@_;
 		my $template;
 		if(ref($self)){
-			Log::OK::TRACE and log_trace __PACKAGE__." instance load called for $path";
+			DEBUG and Log::OK::TRACE and log_trace __PACKAGE__." instance load called for $path";
 			\my %fields=$self->args;
 
 			my %options=$self->meta->%{qw<root use base>}; #copy
@@ -51,7 +52,7 @@ sub load {
 
 		}
 		else{
-			Log::OK::TRACE and log_trace __PACKAGE__." class load called for $path";
+			DEBUG and Log::OK::TRACE and log_trace __PACKAGE__." class load called for $path";
 			#called on package
 			$template=Template::Plex::Internal->new(\&Template::Plex::Internal::_prepare_template, $path, $vars, %opts);
 
@@ -90,7 +91,7 @@ sub cache {
 		my ($id, $path, $vars, %opts)=@args;
 
     #my ($self, $id, $path, $vars, %opts)=@_;
-		Log::OK::TRACE and log_trace __PACKAGE__." cache: $path";
+		DEBUG and Log::OK::TRACE and log_trace __PACKAGE__." cache: $path";
 		$id//=$path.join "", caller;	#Set if undefined
 		if(ref($self)){
 			$self->[cache_]{$id} and return $self->[cache_]{$id};
@@ -108,7 +109,7 @@ sub cache {
 
 #TODO: add parameter checking as per cache
 sub immediate {
-		Log::OK::TRACE and log_trace __PACKAGE__." immediate!!";
+		DEBUG and Log::OK::TRACE and log_trace __PACKAGE__." immediate!!";
     
     my $self=shift;
     my @args=@_;
@@ -127,7 +128,7 @@ sub immediate {
 		my ($id, $path, $vars, @opts)=@args;
 
 
-		Log::OK::TRACE and log_trace __PACKAGE__." immediate: $path";
+		DEBUG and Log::OK::TRACE and log_trace __PACKAGE__." immediate: $path";
 		$id//=$path.join "", caller;	#Set if undefined
 		
 		my $template=$self->cache($id, $path, $vars, @opts);
@@ -153,7 +154,7 @@ sub _render {
 }
 
 sub skip {
-	Log::OK::DEBUG and log_debug("Template::Plex: Skipping Template: ".$_[0]->meta->{file});
+	DEBUG and Log::OK::DEBUG and log_debug("Template::Plex: Skipping Template: ".$_[0]->meta->{file});
 	$_[0]->[skip_]->();
 }
 
@@ -163,10 +164,10 @@ sub _init {
 	my ($self, $sub)=@_;
 	
 	return if $self->[init_done_flag_];
-	Log::OK::DEBUG and log_debug("Template::Plex: Initalising Template: ".$self->meta->{file});
+	DEBUG and Log::OK::DEBUG and log_debug("Template::Plex: Initalising Template: ".$self->meta->{file});
 	unless($self->isa("Template::Plex")){
 	#if($self->[meta_]{package} ne caller){
-		Log::OK::ERROR and log_error("Template::Plex: init must only be called within a template: ".$self->meta->{file});
+		DEBUG and Log::OK::ERROR and log_error("Template::Plex: init must only be called within a template: ".$self->meta->{file});
 		return;
 	}
 
@@ -195,7 +196,7 @@ sub postfix {
 sub setup {
 	my $self=shift;
 	#Test that the caller is not the template package
-	Log::OK::DEBUG and log_debug("Template::Plex: Setup Template: ".$self->meta->{file});
+	DEBUG and Log::OK::DEBUG and log_debug("Template::Plex: Setup Template: ".$self->meta->{file});
 	if($self->[meta_]{package} eq caller){
 		#Log::OK::ERROR and log_error("Template::Plex: setup must only be called outside a template: ".$self->meta->{file});
 		#		return;
@@ -205,7 +206,7 @@ sub setup {
 	
 	#Check if an init block was used
 	unless($self->[init_done_flag_]){
-		Log::OK::WARN and log_warn "Template::Plex ignoring no \@{[init{...}]} block in template from ". $self->meta->{file};
+		DEBUG and Log::OK::WARN and log_warn "Template::Plex ignoring no \@{[init{...}]} block in template from ". $self->meta->{file};
 		$self->[init_done_flag_]=1;
 	}
 	"";
@@ -221,7 +222,7 @@ sub slot {
 	my ($self, $slot_name, $default_value)=@_;
 	$slot_name//="default";	#If no name assume default
 
-	Log::OK::TRACE and log_trace __PACKAGE__.": Template called slot: $slot_name";
+	DEBUG and Log::OK::TRACE and log_trace __PACKAGE__.": Template called slot: $slot_name";
 	my $data=$self->[slots_]{$slot_name};
 	my $output="";
 	
@@ -229,16 +230,16 @@ sub slot {
 	if(defined($data) and $data->isa("Template::Plex")){
 		#render template
 		if($slot_name eq "default"){
-			Log::OK::TRACE and log_trace __PACKAGE__.": copy default slot";
+			DEBUG and Log::OK::TRACE and log_trace __PACKAGE__.": copy default slot";
 			$output.=$self->[default_result_]//"";
 		}
 		else {
-			Log::OK::TRACE and log_trace __PACKAGE__.": render non default template slot";
+			DEBUG and Log::OK::TRACE and log_trace __PACKAGE__.": render non default template slot";
 			$output.=$data->render;
 		}
 	}
 	else {
-		Log::OK::TRACE and log_trace __PACKAGE__.": render non template slot";
+		DEBUG and Log::OK::TRACE and log_trace __PACKAGE__.": render non template slot";
 		#otherwise treat as text
 		$output.=$data//"";
 	}
@@ -249,7 +250,7 @@ sub fill_slot {
 	my ($self)=shift;
 	my $parent=$self->[parent_];
 	unless($parent){
-		Log::OK::WARN and log_warn __PACKAGE__.": No parent setup for: ". $self->meta->{file};
+		DEBUG and Log::OK::WARN and log_warn __PACKAGE__.": No parent setup for: ". $self->meta->{file};
 		return;
 	}
 
@@ -278,7 +279,7 @@ sub append_slot {
   my $parent=$self->[parent_];
   unless($parent){
 
-    Log::OK::WARN and log_warn __PACKAGE__.": No parent setup for ". $self->meta->{file};
+    DEBUG and Log::OK::WARN and log_warn __PACKAGE__.": No parent setup for ". $self->meta->{file};
     return
   }
   else{
@@ -294,7 +295,7 @@ sub prepend_slot {
   my $parent=$self->[parent_];
   unless($parent){
 
-    Log::OK::WARN and log_warn __PACKAGE__.": No parent setup for ". $self->meta->{file};
+    DEBUG and Log::OK::WARN and log_warn __PACKAGE__.": No parent setup for ". $self->meta->{file};
     return
   }
   else{
@@ -309,7 +310,7 @@ sub prepend_slot {
 
 sub inherit {
 	my ($self, $path)=@_;
-	Log::OK::DEBUG and log_debug __PACKAGE__.": Inherit: $path";
+	DEBUG and Log::OK::DEBUG and log_debug __PACKAGE__.": Inherit: $path";
 	#If any parent variables have be setup load the parent template
 
 	#Setup the parent. Cached  with path
@@ -334,7 +335,7 @@ sub render {
 
 	}
 
-	Log::OK::TRACE and log_trace __PACKAGE__.": render :".$self->meta->{file}." flag: ".($top_down//"");
+	DEBUG and Log::OK::TRACE and log_trace __PACKAGE__.": render :".$self->meta->{file}." flag: ".($top_down//"");
 
 	#locate the 'top level' template and  call downwards
 	my $p=$self;
@@ -351,15 +352,15 @@ sub render {
 		#Turn it around and call back down the chain
 		#
 
-		Log::OK::TRACE and log_trace __PACKAGE__.": render: no parent bottom up. assume normal render";
+		DEBUG and Log::OK::TRACE and log_trace __PACKAGE__.": render: no parent bottom up. assume normal render";
 		#Check slots. Slots indicate we need to call the child first
 		if($self->[slots_] and $self->[slots_]->%*){
-			Log::OK::TRACE and log_trace __PACKAGE__.": render: rendering default slot";
+			DEBUG and Log::OK::TRACE and log_trace __PACKAGE__.": render: rendering default slot";
 			$self->[default_result_]=$self->[slots_]{default}->render($fields,1);
 		}
 
 		#now call render on self. This renders non hierarchial templates
-		Log::OK::TRACE and log_trace __PACKAGE__.": render: rendering body and sub templates";
+		DEBUG and Log::OK::TRACE and log_trace __PACKAGE__.": render: rendering body and sub templates";
 		my $total=$self->_render($fields); #Call down the chain with top_down flag
 		$self->[default_result_]="";	#Clear
 		return $total;

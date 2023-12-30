@@ -77,7 +77,7 @@ distribution cover the basics to get you started. Reading through the `load`
 API options is also recommended to get a better understanding on how templates
 are processed.
 
-# MOTIATION
+# MOTIVATION
 
 Many templating systems are available, yet none use Perl as the template
 language? Perl already has a great text interpolation, so why not use it? 

@@ -73,7 +73,7 @@ API options is also recommended to get a better understanding on how templates
 are processed.
 
 
-=head1 MOTIATION
+=head1 MOTIVATION
 
 Many templating systems are available, yet none use Perl as the template
 language? Perl already has a great text interpolation, so why not use it? 
