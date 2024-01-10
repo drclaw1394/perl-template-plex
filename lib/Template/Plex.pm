@@ -3,7 +3,7 @@ package Template::Plex;
 use strict;
 use warnings;
 
-our $VERSION = 'v0.6.3';
+our $VERSION = 'v0.7.0';
 use feature qw<say refaliasing>;
 no warnings "experimental";
 
@@ -48,12 +48,24 @@ sub load {
 			\my %fields=$self->args;
 
 			my %options=$self->meta->%{qw<root use base>}; #copy
+      if(%opts){
+        $opts{caller}=$self; 
+      }
+      else {
+        $options{caller}=$self;
+      }
+      
 			$template=Template::Plex::Internal->new(\&Template::Plex::Internal::_prepare_template, $path, $vars?$vars:\%fields, %opts?%opts:%options);
 
 		}
 		else{
 			DEBUG and Log::OK::TRACE and log_trace __PACKAGE__." class load called for $path";
 			#called on package
+      my $dummy=[];
+      $dummy->[Template::Plex::meta_]={file=>(caller)[1]}; 
+      bless $dummy, "Template::Plex";
+      $opts{caller}=$dummy;
+
 			$template=Template::Plex::Internal->new(\&Template::Plex::Internal::_prepare_template, $path, $vars, %opts);
 
 		}
@@ -75,6 +87,7 @@ sub load {
 sub cache {
     my $self=shift;
     my @args=@_;
+
 
     if(@args ==1){
         # Recalling implicit cache key with path only
@@ -132,7 +145,7 @@ sub immediate {
 		$id//=$path.join "", caller;	#Set if undefined
 		
 		my $template=$self->cache($id, $path, $vars, @opts);
-		return $template->render if $template;
+		return $template->render($vars) if $template;
 		"";
 
 }
