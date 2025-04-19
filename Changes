@@ -1,4 +1,19 @@
 Revision history for Perl extension Template::Plex.
+v0.8.0 2024-12-09
+  [fixes]
+    - immedate load/render only forces id to path/caller combo when undefined
+      key is used. Prevents unneeded multiple loading
+
+  [improvements]
+    - If filename has plex or plx in the name (or be an array ref), processing
+      is normal. Otherwise the file is assumed to be not be template (ie could
+      be a binary file). The content is encode/decode as hex when the template
+      is exucuted. This avoids strage syntax errors and helps make it clear
+      which files are to be templates vs static resources.
+
+    - init_fix is only applied to templates not static resources
+
+
 v0.7.1 2024-04-23
   [fixes]
     -  { and } characters are now replaced with Perl escape equivalents \{ and
