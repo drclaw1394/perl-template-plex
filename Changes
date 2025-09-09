@@ -1,4 +1,8 @@
 Revision history for Perl extension Template::Plex.
+v0.9.1 2025-07-29
+  [fixes]
+    - Fixed a crash when rendering to slots when a default slot was not present/no inheritance
+
 v0.9.0 2025-07-29
   [fixes]
     - fixed incorrect element access is DESTROY method

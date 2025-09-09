@@ -3,7 +3,7 @@ package Template::Plex;
 use strict;
 use warnings;
 
-our $VERSION = 'v0.9.0';
+our $VERSION = 'v0.9.1';
 use feature qw<say refaliasing>;
 no warnings "experimental";
 
@@ -391,7 +391,7 @@ sub render {
 		#Check slots. Slots indicate we need to call the child first
 		if($self->[slots_] and $self->[slots_]->%*){
 			DEBUG and Log::OK::TRACE and log_trace __PACKAGE__.": render: rendering default slot";
-			$self->[default_result_]=$self->[slots_]{default}->render($fields,1);
+			$self->[default_result_]=$self->[slots_]{default}->render($fields,1) if defined $self->[slots_]{default};
 		}
 
 		#now call render on self. This renders non hierarchial templates
