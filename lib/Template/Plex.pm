@@ -344,12 +344,18 @@ sub prepend_slot {
 
 
 sub inherit {
-	my ($self, $path)=@_;
+	my ($self, $path, $root)=@_;
 	DEBUG and Log::OK::DEBUG and log_debug __PACKAGE__.": Inherit: $path";
 	#If any parent variables have be setup load the parent template
 
 	#Setup the parent. Cached  with path
-	my $p=$self->load($path, $self->args, $self->meta->%*);
+  my %options=$self->meta->%*;
+  if($root){
+    $options{root}=$root;
+  }
+
+  #my $p=$self->load($path, $self->args, $self->meta->%*);
+	my $p=$self->load($path, $self->args, %options);
   #$p->[slots_]={};
 
 	#Add this template to the default slot
